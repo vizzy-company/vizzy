@@ -77,7 +77,7 @@ main{max-width:740px;padding:26px 28px}
 <div id="app" class="hide">
 <header><img class="lg" id="lgH" alt="Vizzy"><div class="row"><button class="btn s thb" title="Tema">🌓</button><button class="btn s lob">Sair</button></div></header>
 <aside id="side"><img class="lg" id="lgS" alt="Vizzy">
-<nav><button data-v="feed"><i>🏠</i><span>Início</span></button><button data-v="exp"><i>🔎</i><span>Explorar</span></button><button data-v="aud"><i>🎵</i><span>Áudios</span></button><button data-v="msg"><i>💬</i><span>Mensagens</span></button><button data-v="me"><i>👤</i><span>Perfil</span></button></nav><div class="sb"><button class="btn s thb">🌓 Tema</button><button class="btn s lob">Sair</button></div></aside>
+<nav><button data-v="feed"><i>🏠</i><span>Início</span></button><button data-v="exp"><i>🔎</i><span>Explorar</span></button><button data-v="aud"><i>🎵</i><span>Áudios</span></button><button data-v="msg"><i>💬</i><span>Mensagens</span></button><button data-v="me"><i>👤</i><span>Perfil</span></button><button data-v="cfg"><i>⚙️</i><span>Ajustes</span></button></nav><div class="sb"><button class="btn s thb">🌓 Tema</button><button class="btn s lob">Sair</button></div></aside>
 <main id="main"></main></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-auth-compat.min.js"></script>
@@ -124,7 +124,7 @@ auth.onAuthStateChanged(async u=>{if(!u){me=null;$('#auth').classList.remove('hi
  let d=await db.collection('users').doc(u.uid).get();for(let i=0;i<5&&!d.exists;i++){await new Promise(r=>setTimeout(r,500));d=await db.collection('users').doc(u.uid).get()}
  if(!d.exists)return;me={uid:u.uid,...d.data()};$('#auth').classList.add('hide');$('#app').classList.remove('hide');go('feed')});
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
-function go(v){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));if(unsub){unsub();unsub=null}({feed,exp,aud,msg,me:prof})[v]()}
+function go(v){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));if(unsub){unsub();unsub=null}({feed,exp,aud,msg,me:prof,cfg:settings})[v]()}
 let unsub=null,obs=null;
 // FEED
 let last,busy,done;
@@ -186,12 +186,29 @@ async function aud(){$('#main').innerHTML=`<div class="drop" id="da">Arraste arq
 function viewProfile(uid){document.querySelectorAll('.modal').forEach(m=>m.remove());document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v=='me'&&uid==me.uid));if(unsub){unsub();unsub=null}prof(uid)}
 async function prof(uid){uid=typeof uid=='string'?uid:me.uid;const own=uid==me.uid,u=own?me:((await db.collection('users').doc(uid).get()).data()||{name:'Usuário'});
  const ps=(await db.collection('posts').where('uid','==',uid).get()).docs.sort((a,b)=>(b.data().ts?.toMillis?.()||9e15)-(a.data().ts?.toMillis?.()||9e15));
- $('#main').innerHTML=`<div class="card pf"><img class="av big" id="pa" src="${u.photo||ICON}"><div><h2>${esc(u.name)}</h2><p class="mt" style="font-size:14px">${esc(u.bio||'Sem bio ainda.')}</p><p><b>${ps.length}</b> fotos · <b>${ps.reduce((a,d)=>a+(d.data().likes||[]).length,0)}</b> curtidas</p>${own?`<div class="row" style="flex-wrap:wrap"><button class="btn s" id="cf">Trocar foto</button>${mobile?'<button class="btn s" id="cc">📷 Câmera</button>':''}<button class="btn s" id="eb">Editar bio</button></div>`:'<button class="btn" id="dm">💬 Mensagem</button>'}</div></div><div class="grid" id="gr"></div>`;
+ $('#main').innerHTML=`<div class="card pf"><img class="av big" id="pa" src="${u.photo||ICON}"><div><h2>${esc(u.name)}</h2><p class="mt" style="font-size:14px">${esc(u.bio||'Sem bio ainda.')}</p><p><b>${ps.length}</b> fotos · <b>${ps.reduce((a,d)=>a+(d.data().likes||[]).length,0)}</b> curtidas</p>${own?'<button class="btn s" id="eb">⚙️ Editar perfil</button>':'<button class="btn" id="dm">💬 Mensagem</button>'}</div></div><div class="grid" id="gr"></div>`;
  grid($('#gr'),ps);
- if(own){const set=async f=>{if(!f)return;me.photo=await shrink(f,200,60e3);await db.collection('users').doc(me.uid).update({photo:me.photo});$('#pa').src=me.photo};
-  $('#cf').onclick=async()=>set(await pick('image/*'));if(mobile)$('#cc').onclick=async()=>set(await pick('image/*',1));
-  $('#eb').onclick=async()=>{const b=prompt('Sua bio (até 150 caracteres):',me.bio||'');if(b==null)return;me.bio=b.slice(0,150);await db.collection('users').doc(me.uid).update({bio:me.bio});prof()}}
+ if(own)$('#eb').onclick=()=>go('cfg');
  else $('#dm').onclick=async()=>{const id=[me.uid,uid].sort().join('_');await db.collection('chats').doc(id).set({type:'dm',members:[me.uid,uid],names:{[me.uid]:me.name,[uid]:u.name},ts:TS()},{merge:true});go('msg')}}
+// AJUSTES
+const EM={'auth/wrong-password':'Senha atual incorreta','auth/invalid-credential':'Senha atual incorreta','auth/email-already-in-use':'Esse e-mail já está em uso','auth/invalid-email':'E-mail inválido','auth/weak-password':'A nova senha precisa ter pelo menos 6 caracteres','auth/too-many-requests':'Muitas tentativas. Tente mais tarde','auth/requires-recent-login':'Entre de novo na conta e tente outra vez'};
+const errMsg=e=>EM[e.code]||e.message;
+async function reauth(p){const u=auth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,p))}
+function settings(){const u=auth.currentUser;
+ $('#main').innerHTML=`<h2>Configurações</h2>
+ <div class="card" style="padding:16px"><h3>Perfil</h3><div class="row" style="justify-content:flex-start;margin-bottom:8px"><img class="av big" id="pa" src="${me.photo||ICON}" style="flex:none"><div class="row w"><button class="btn s" id="cf">Trocar foto</button>${mobile?'<button class="btn s" id="cc">📷 Câmera</button>':''}<button class="btn s" id="rf">Remover</button></div></div><label class="mt">Bio</label><input id="bio" maxlength="150" placeholder="Fale sobre você" value="${esc(me.bio||'')}"><button class="btn" id="sb2">Salvar perfil</button></div>
+ <div class="card" style="padding:16px"><h3>Aparência</h3><button class="btn s" id="tg">🌓 Alternar claro / escuro</button></div>
+ <div class="card" style="padding:16px"><h3>E-mail</h3><p class="mt">Atual: ${esc(u.email)}</p><input id="ne" type="email" placeholder="Novo e-mail"><input id="pe" type="password" placeholder="Senha atual"><button class="btn" id="be">Alterar e-mail</button></div>
+ <div class="card" style="padding:16px"><h3>Senha</h3><input id="p0" type="password" placeholder="Senha atual"><input id="p1" type="password" placeholder="Nova senha (mín. 6)"><input id="p2" type="password" placeholder="Repita a nova senha"><button class="btn" id="bp">Alterar senha</button></div>
+ <div class="card" style="padding:16px"><button class="btn s" id="lg2" style="width:100%">Sair da conta</button></div>`;
+ const set=async f=>{if(!f)return;me.photo=await shrink(f,200,60e3);await db.collection('users').doc(me.uid).update({photo:me.photo});$('#pa').src=me.photo;toast('Foto atualizada')};
+ $('#cf').onclick=async()=>set(await pick('image/*'));if(mobile)$('#cc').onclick=async()=>set(await pick('image/*',1));
+ $('#rf').onclick=async()=>{me.photo='';await db.collection('users').doc(me.uid).update({photo:''});$('#pa').src=ICON;toast('Foto removida')};
+ $('#sb2').onclick=async()=>{me.bio=$('#bio').value.trim().slice(0,150);await db.collection('users').doc(me.uid).update({bio:me.bio});toast('Perfil salvo')};
+ $('#tg').onclick=()=>theme(document.documentElement.dataset.t=='dark'?'light':'dark');
+ $('#lg2').onclick=()=>auth.signOut();
+ $('#be').onclick=async()=>{const n=$('#ne').value.trim(),p=$('#pe').value;if(!n||!p)return toast('Preencha o novo e-mail e a senha atual');try{await reauth(p);await auth.currentUser.verifyBeforeUpdateEmail(n);$('#pe').value='';toast('Enviamos um link de confirmação para '+n+'. O e-mail só muda depois que você clicar nele.')}catch(e){toast(errMsg(e))}};
+ $('#bp').onclick=async()=>{const a=$('#p0').value,b=$('#p1').value;if(!a)return toast('Digite a senha atual');if(b.length<6)return toast('A nova senha precisa ter pelo menos 6 caracteres');if(b!==$('#p2').value)return toast('As senhas não coincidem');try{await reauth(a);await auth.currentUser.updatePassword(b);['#p0','#p1','#p2'].forEach(s=>$(s).value='');toast('Senha alterada!')}catch(e){toast(errMsg(e))}}}
 // MENSAGENS
 let cu=null;
 function msg(){$('#main').innerHTML=`<div class="row w" style="margin-bottom:10px"><button class="btn s" id="n1">+ DM</button><button class="btn s" id="n2">+ Grupo</button><button class="btn s" id="n3">+ Comunidade</button><button class="btn s" id="n4">Explorar</button></div><div class="chat"><div class="cl" id="cl"></div><div id="cv2" class="hide"></div></div>`;
