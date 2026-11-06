@@ -113,6 +113,10 @@ nav button{position:relative;transition:.15s}nav button svg{display:block}nav bu
 .lnk{background:none;border:0;color:var(--ac);font-weight:700;padding:6px 8px}.lnk:disabled{color:var(--mut)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .or{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12px;margin:14px 0 10px}.or::before,.or::after{content:'';flex:1;height:1px;background:var(--bd)}
+.bn{background:linear-gradient(135deg,var(--ac),var(--ac2)) center/cover;height:130px;flex:none;margin:-22px -22px 0;width:calc(100% + 44px)}
+.bn.bp{margin:6px 0 10px;width:100%;height:90px;border-radius:12px}
+.card.pf{flex-wrap:wrap;align-items:flex-start;row-gap:14px}.pf>div:not(.bn){flex:1}.card.pf .av.big{margin-top:-58px;position:relative}
+@media(max-width:760px){.card.pf{align-items:center}.pf>div:not(.bn){flex:none}}
 </style></head><body>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -323,7 +327,15 @@ function studio(){$('#main').innerHTML=`<h2>Studio</h2>${priv()?'<p class="mt">�
  $('#s4').onclick=()=>go('aud')}
 // ÁUDIOS
 async function aud(){$('#main').innerHTML=`<div class="drop" id="da">Arraste arquivos de áudio do computador (até 15 MB cada)<br><button class="btn s" id="ba" style="margin-top:8px">Escolher áudio</button></div><div id="al"></div>`;
- const up=async f=>{if(!f||!f.type.startsWith('audio/'))return;if(f.size>15e6)return toast('Áudio maior que 15 MB');$('#ba').textContent='Enviando...';const d=await readURL(f),r=await db.collection('audios').add({uid:me.uid,name:f.name.slice(0,40),ts:TS()});for(let i=0;i*7e5<d.length;i++)await r.collection('chunks').doc(String(i).padStart(4,'0')).set({i,d:d.slice(i*7e5,(i+1)*7e5)});$('#ba').textContent='Escolher áudio';list()};
+ const up=async f=>{if(!f)return;const ok=/\.(mp3|m4a|aac|wav|ogg|oga|opus|flac|amr|3gp|weba|webm|mp4)$/i.test(f.name)||/^(audio|video)\//.test(f.type);if(!ok)return toast('Escolha um arquivo de áudio');if(f.size>15e6)return toast('Áudio maior que 15 MB');
+ const bt=$('#ba'),CH=3e5;let r;bt.disabled=true;bt.textContent='Preparando...';
+ try{let d=await readURL(f);if(!d.startsWith('data:audio/'))d='data:audio/mpeg;base64,'+d.slice(d.indexOf(',')+1);
+  r=await db.collection('audios').add({uid:me.uid,name:f.name.slice(0,40),ts:TS()});const N=Math.ceil(d.length/CH);
+  for(let i=0;i<N;i++){bt.textContent='Enviando '+Math.round(i/N*100)+'%';
+   for(let t=0;;t++){try{await r.collection('chunks').doc(String(i).padStart(4,'0')).set({i,d:d.slice(i*CH,(i+1)*CH)});break}catch(e){if(t>=2)throw e;await new Promise(y=>setTimeout(y,800*(t+1)))}}}
+  toast('Áudio enviado')}
+ catch(e){showErr(e,'enviar áudio');if(r){try{const c=await r.collection('chunks').get();for(const k of c.docs)await k.ref.delete();await r.delete()}catch(x){}}}
+ bt.disabled=false;bt.textContent='Escolher áudio';list()};
  $('#ba').onclick=async()=>up(await pick('audio/*'));const d=$('#da');d.ondragover=e=>e.preventDefault();d.ondrop=e=>{e.preventDefault();up(e.dataTransfer.files[0])};
  async function list(){const s=await db.collection('audios').where('uid','==',me.uid).get();$('#al').innerHTML='';s.forEach(x=>{const e=document.createElement('div');e.className='card ph';e.innerHTML=`<span style="flex:1">🎵 ${esc(x.data().name)}</span><button class="btn s p">▶</button><button class="btn s x">Excluir</button>`;e.querySelector('.p').onclick=ev=>playAudio(x.id,ev.target);e.querySelector('.x').onclick=async()=>{const c=await x.ref.collection('chunks').get();for(const k of c.docs)await k.ref.delete();await x.ref.delete();e.remove()};$('#al').append(e)})}list()}
 // PERFIL
@@ -344,7 +356,7 @@ async function prof(uid){uid=typeof uid=='string'?uid:me.uid;
  const own=uid==me.uid,u=own?me:((await db.collection('users').doc(uid).get()).data()||{name:'Usuário'}),pv=u.type=='personal',can=!pv||own||fri.has(uid),E={docs:[],size:0};
  const [ps,fr,fg]=await Promise.all([!can?E:pv?db.collection('users').doc(uid).collection('pposts').get():db.collection('posts').where('uid','==',uid).get(),pv?E:db.collection('follows').where('b','==',uid).get(),pv?E:db.collection('follows').where('a','==',uid).get()]);
  const docs=ps.docs.sort((a,b)=>(b.data().ts?.toMillis?.()||9e15)-(a.data().ts?.toMillis?.()||9e15));let isF=fol.has(uid),nF=fr.size;
- $('#main').innerHTML=`<div class="card pf"><img class="av big" id="pa" src="${u.photo||ICON}"><div><h2>${esc(u.name)}${pv?' 🔒':''}</h2><p class="mt" style="font-size:14px">${esc(u.bio||'Sem bio ainda.')}</p>${pv?'<p class="mt">Conta pessoal. Só amigos veem as publicações.</p>':`<p><b>${docs.length}</b> posts · <b id="nf" style="cursor:pointer">${nF}</b> seguidores · <b id="ng" style="cursor:pointer">${fg.size}</b> seguindo</p>`}<div class="row w" id="pb"></div></div></div>${can?'':'<div class="card" style="padding:22px;text-align:center">🔒 As publicações são visíveis só para amigos.</div>'}<div id="fx"></div><div class="grid" id="gr"></div>`;
+ $('#main').innerHTML=`<div class="card pf"><div class="bn" style="${u.banner?'background-image:url('+u.banner+')':''}"></div><img class="av big" id="pa" src="${u.photo||ICON}"><div><h2>${esc(u.name)}${pv?' 🔒':''}</h2><p class="mt" style="font-size:14px">${esc(u.bio||'Sem bio ainda.')}</p>${pv?'<p class="mt">Conta pessoal. Só amigos veem as publicações.</p>':`<p><b>${docs.length}</b> posts · <b id="nf" style="cursor:pointer">${nF}</b> seguidores · <b id="ng" style="cursor:pointer">${fg.size}</b> seguindo</p>`}<div class="row w" id="pb"></div></div></div>${can?'':'<div class="card" style="padding:22px;text-align:center">🔒 As publicações são visíveis só para amigos.</div>'}<div id="fx"></div><div class="grid" id="gr"></div>`;
  if(can)grid($('#gr'),docs);else $('#gr').remove();
  if(!pv){$('#nf').onclick=()=>listUsers('Seguidores',fr.docs.map(d=>d.data().a));$('#ng').onclick=()=>listUsers('Seguindo',fg.docs.map(d=>d.data().b))}
  const pb=$('#pb'),mk=(tx,fn,cls)=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=tx;b.onclick=async()=>{try{await fn()}catch(e){showErr(e,'perfil')}};pb.append(b);return b};
@@ -363,7 +375,7 @@ const errMsg=e=>EM[e.code]||e.message;
 async function reauth(p){const u=auth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,p))}
 function settings(){const u=auth.currentUser;
  $('#main').innerHTML=`<h2>Configurações</h2><p class="mt">Tipo da conta: ${priv()?'pessoal 🔒 (só amigos veem)':'pública 🌍'}</p>
- <div class="card" style="padding:16px"><h3>Perfil</h3><div class="row" style="justify-content:flex-start;margin-bottom:8px"><img class="av big" id="pa" src="${me.photo||ICON}" style="flex:none"><div class="row w"><button class="btn s" id="cf">Trocar foto</button>${mobile?'<button class="btn s" id="cc">📷 Câmera</button>':''}<button class="btn s" id="rf">Remover</button></div></div><label class="mt">Bio</label><input id="bio" maxlength="150" placeholder="Fale sobre você" value="${esc(me.bio||'')}"><button class="btn" id="sb2">Salvar perfil</button></div>
+ <div class="card" style="padding:16px"><h3>Perfil</h3><div class="row" style="justify-content:flex-start;margin-bottom:8px"><img class="av big" id="pa" src="${me.photo||ICON}" style="flex:none"><div class="row w"><button class="btn s" id="cf">Trocar foto</button>${mobile?'<button class="btn s" id="cc">📷 Câmera</button>':''}<button class="btn s" id="rf">Remover</button></div></div><label class="mt">Banner do perfil</label><div class="bn bp" id="bnp" style="${me.banner?'background-image:url('+me.banner+')':''}"></div><div class="row w" style="margin-bottom:10px"><button class="btn s" id="bnc">Trocar banner</button><button class="btn s" id="bnr">Remover</button></div><label class="mt">Bio</label><input id="bio" maxlength="150" placeholder="Fale sobre você" value="${esc(me.bio||'')}"><button class="btn" id="sb2">Salvar perfil</button></div>
  <div class="card" style="padding:16px"><h3>Aparência</h3><button class="btn s" id="tg">🌓 Alternar claro / escuro</button></div>
  <div class="card" style="padding:16px"><h3>E-mail</h3><p class="mt">Atual: ${esc(u.email)}</p><input id="ne" type="email" placeholder="Novo e-mail"><input id="pe" type="password" placeholder="Senha atual"><button class="btn" id="be">Alterar e-mail</button></div>
  <div class="card" style="padding:16px"><h3>Senha</h3><input id="p0" type="password" placeholder="Senha atual"><input id="p1" type="password" placeholder="Nova senha (mín. 6)"><input id="p2" type="password" placeholder="Repita a nova senha"><button class="btn" id="bp">Alterar senha</button></div>
@@ -372,6 +384,9 @@ function settings(){const u=auth.currentUser;
  $('#cf').onclick=async()=>set(await pick('image/*'));if(mobile)$('#cc').onclick=async()=>set(await pick('image/*',1));
  $('#rf').onclick=async()=>{me.photo='';await db.collection('users').doc(me.uid).update({photo:''});$('#pa').src=ICON;toast('Foto removida')};
  $('#sb2').onclick=async()=>{me.bio=$('#bio').value.trim().slice(0,150);await db.collection('users').doc(me.uid).update({bio:me.bio});toast('Perfil salvo')};
+ const sbn=async v=>{await db.collection('users').doc(me.uid).update({banner:v});me.banner=v;$('#bnp').style.backgroundImage=v?'url('+v+')':'';toast(v?'Banner atualizado':'Banner removido')};
+ $('#bnc').onclick=async()=>{const f=await pick('image/*');if(!f)return;try{await sbn(await bannerImg(f))}catch(e){showErr(e,'banner')}};
+ $('#bnr').onclick=()=>sbn('').catch(e=>showErr(e,'banner'));
  $('#tg').onclick=()=>theme(document.documentElement.dataset.t=='dark'?'light':'dark');
  $('#lg2').onclick=()=>auth.signOut();
  $('#be').onclick=async()=>{const n=$('#ne').value.trim(),p=$('#pe').value;if(!n||!p)return toast('Preencha o novo e-mail e a senha atual');try{await reauth(p);await auth.currentUser.verifyBeforeUpdateEmail(n);$('#pe').value='';toast('Enviamos um link de confirmação para '+n+'. O e-mail só muda depois que você clicar nele.')}catch(e){toast(errMsg(e))}};
@@ -429,4 +444,6 @@ function gsetup(u){return new Promise(res=>{
   try{if(!(await db.collection('users').where('name','==',n).limit(1).get()).empty){er.textContent='Nome já em uso';b.disabled=false;return}
    await db.collection('users').doc(u.uid).set({name:n,photo:'',type:m.querySelector('#gt').value,ts:TS()});m.remove();res()}
   catch(x){er.textContent=x.message;b.disabled=false}}})}
+
+async function bannerImg(f){const i=await loadImg(await readURL(f));let q=.85,w=1200,o;for(let n=0;n<8;n++){const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(w/3);const x=c.getContext('2d'),k=Math.max(c.width/i.width,c.height/i.height),dw=i.width*k,dh=i.height*k;x.drawImage(i,(c.width-dw)/2,(c.height-dh)/2,dw,dh);o=c.toDataURL('image/jpeg',q);if(o.length<200e3)break;w*=.85;q=Math.max(.5,q-.06)}return o}
 </script></body></html>
