@@ -67,6 +67,11 @@ main{max-width:740px;padding:26px 28px}
 .msgs{height:auto!important;min-height:30vh;overflow:visible}
 .inp{position:sticky;bottom:calc(66px + env(safe-area-inset-bottom));background:var(--sf);padding:8px 0;z-index:6}
 @media(min-width:761px){.inp{bottom:0}}
+.mw{position:relative}.car{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}.car::-webkit-scrollbar{display:none}
+.car img{flex:0 0 100%;width:100%;max-height:75vh;object-fit:contain;scroll-snap-align:center;background:var(--in)}
+.dots{display:flex;justify-content:center;gap:6px;padding:9px}.dots i{width:7px;height:7px;border-radius:50%;background:var(--bd);cursor:pointer;transition:.15s}.dots i.on{background:var(--ac);transform:scale(1.3)}
+.nv{position:absolute;top:45%;transform:translateY(-50%);background:#0009;color:#fff;border:0;border-radius:50%;width:32px;height:32px;font-size:20px;line-height:1;z-index:2}.nv.l{left:8px}.nv.r{right:8px}
+@media(pointer:coarse){.nv{display:none}}
 </style></head><body>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy">
@@ -107,7 +112,7 @@ const readURL=f=>new Promise(r=>{const x=new FileReader;x.onload=()=>r(x.result)
 const loadImg=src=>new Promise(r=>{const i=new Image;i.onload=()=>r(i);i.src=src});
 async function shrink(f,max=1280,lim=240e3){const i=await loadImg(await readURL(f));let k=Math.min(1,max/Math.max(i.width,i.height)),q=.85,o;for(let n=0;n<8;n++){const c=document.createElement('canvas');c.width=Math.max(1,i.width*k);c.height=Math.max(1,i.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0,c.width,c.height);o=c.toDataURL('image/jpeg',q);if(o.length<lim)break;k*=.85;q=Math.max(.5,q-.06)}return o}
 const fit=c=>{let q=.85,k=1,o;for(let n=0;n<8;n++){const t=document.createElement('canvas');t.width=c.width*k;t.height=c.height*k;t.getContext('2d').drawImage(c,0,0,t.width,t.height);o=t.toDataURL('image/jpeg',q);if(o.length<300e3)break;k*=.85;q=Math.max(.5,q-.06)}return o};
-function pick(accept,cap){return new Promise(r=>{const i=document.createElement('input');i.type='file';i.accept=accept;if(cap)i.capture='environment';i.onchange=()=>r(i.files[0]);i.click()})}
+function pick(accept,cap,multi){return new Promise(r=>{const i=document.createElement('input');i.type='file';i.accept=accept;if(cap)i.capture='environment';if(multi)i.multiple=true;i.onchange=()=>r(multi?[...i.files]:i.files[0]);i.click()})}
 function modal(html){const m=document.createElement('div');m.className='modal';m.innerHTML='<div class="box">'+html+'</div>';m.onclick=e=>{if(e.target==m)m.remove()};document.body.append(m);return m}
 const AC={};
 async function audSrc(id){if(AC[id])return AC[id];const s=await db.collection('audios').doc(id).collection('chunks').orderBy('i').get();return AC[id]=s.docs.map(d=>d.data().d).join('')}
@@ -131,17 +136,17 @@ function go(v){document.querySelectorAll('nav button').forEach(b=>b.classList.to
 let unsub=null,obs=null;
 // FEED
 let last,busy,done;
-function feed(){$('#main').innerHTML=`<div class="stories" id="sts"></div><div class="drop" id="dz"><b style="color:var(--tx)">Nova publicação</b><br><small>Arraste uma foto aqui ou escolha</small><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="gal" style="flex:none">🖼 Galeria</button>${mobile?'<button class="btn s" id="cam" style="flex:none">📷 Câmera</button>':''}</div></div><div id="fd"></div><p class="mt" id="em" style="text-align:center"></p><div id="end" style="height:40px"></div>`;
+function feed(){$('#main').innerHTML=`<div class="stories" id="sts"></div><div class="drop" id="dz"><b style="color:var(--tx)">Nova publicação</b><br><small>Arraste ou escolha uma foto. Várias fotos viram um carrossel</small><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="gal" style="flex:none">🖼 Galeria</button>${mobile?'<button class="btn s" id="cam" style="flex:none">📷 Câmera</button>':''}</div></div><div id="fd"></div><p class="mt" id="em" style="text-align:center"></p><div id="end" style="height:40px"></div>`;
  const dz=$('#dz');dz.ondragover=e=>{e.preventDefault();dz.classList.add('o')};dz.ondragleave=()=>dz.classList.remove('o');
- dz.ondrop=e=>{e.preventDefault();dz.classList.remove('o');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)editor(f,'posts')};
- $('#gal').onclick=async()=>{const f=await pick('image/*');f&&editor(f,'posts')};
+ dz.ondrop=e=>{e.preventDefault();dz.classList.remove('o');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length>1)carousel(fs);else if(fs[0])editor(fs[0],'posts')};
+ $('#gal').onclick=async()=>{const fs=await pick('image/*',0,1);if(fs&&fs.length>1)carousel(fs);else if(fs&&fs[0])editor(fs[0],'posts')};
  if(mobile)$('#cam').onclick=async()=>{const f=await pick('image/*',1);f&&editor(f,'posts')};
  last=null;busy=false;done=false;if(obs)obs.disconnect();obs=new IntersectionObserver(e=>e[0].isIntersecting&&more(),{rootMargin:'600px'});obs.observe($('#end'));loadStories()}
 async function more(){if(busy||done||!$('#fd'))return;busy=true;let q=db.collection('posts').orderBy('ts','desc').limit(5);if(last)q=q.startAfter(last);
  const s=await q.get();if(s.size<5)done=true;if(s.size)last=s.docs[s.size-1];s.forEach(d=>$('#fd').append(postEl(d.id,d.data())));
  if(!$('#fd').children.length)$('#em').textContent='Ainda não há publicações. Seja o primeiro!';busy=false;const en=$('#end');if(en&&!done&&en.getBoundingClientRect().top<innerHeight+600)more()}
 function postEl(id,p){const e=document.createElement('article');e.className='card';let L=p.likes||[];
- e.innerHTML=`<div class="ph"><img class="av" src="${p.avatar||ICON}"><div style="flex:1"><b>${esc(p.name)}</b><div class="mt">${ago(p.ts)}</div></div>${p.uid==me.uid?'<button class="ib dl" title="Excluir">🗑</button>':''}</div><img class="im" src="${p.img}" loading="lazy">
+ e.innerHTML=`<div class="ph"><img class="av" src="${p.avatar||ICON}"><div style="flex:1"><b>${esc(p.name)}</b><div class="mt">${ago(p.ts)}</div></div>${p.uid==me.uid?'<button class="ib dl" title="Excluir">🗑</button>':''}</div><div class="mwh"><img class="im" src="${p.img}" loading="lazy"></div>
  <div class="act"><button class="ib lk"></button><button class="ib cm">💬</button>${p.audio?'<button class="btn s au" style="margin-left:auto">▶ áudio</button>':''}</div>
  ${p.cap?`<p class="cp"><b>${esc(p.name)}</b> ${esc(p.cap)}</p>`:''}<div class="cs hide"><div class="cl2"></div><div class="row"><input placeholder="Comentar..." maxlength="300"><button class="btn" style="flex:none">Enviar</button></div></div>`;
  e.querySelector('.av').onclick=e.querySelector('b').onclick=()=>viewProfile(p.uid);
@@ -149,10 +154,29 @@ function postEl(id,p){const e=document.createElement('article');e.className='car
  lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];r();try{await db.collection('posts').doc(id).update({likes:firebase.firestore.FieldValue[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x)}};
  const cs=e.querySelector('.cs'),cl=cs.querySelector('.cl2'),inp=cs.querySelector('input'),col=db.collection('posts').doc(id).collection('comments');let ld=0;
  const add=c=>{const d=document.createElement('p');d.className='cmt';d.innerHTML=`<b>${esc(c.name)}</b> ${esc(c.t)}`;cl.append(d)};
+ inp.onkeydown=ev=>{if(ev.key=='Enter')cs.querySelector('.btn').click()};
  e.querySelector('.cm').onclick=async()=>{cs.classList.toggle('hide');if(!ld){ld=1;(await col.orderBy('ts').limit(50).get()).forEach(d=>add(d.data()))}};
  cs.querySelector('.btn').onclick=async()=>{const x=inp.value.trim();if(!x)return;inp.value='';add({name:me.name,t:x});await col.add({uid:me.uid,name:me.name,t:x,ts:TS()})};
  if(p.audio)e.querySelector('.au').onclick=ev=>playAudio(p.audio,ev.target);
- const d=e.querySelector('.dl');if(d)d.onclick=async()=>{if(confirm('Excluir esta publicação?')){await db.collection('posts').doc(id).delete();e.remove()}};return e}
+ if(p.n>1)db.collection('posts').doc(id).collection('imgs').orderBy('i').get().then(s=>{const w=e.querySelector('.mwh');w.innerHTML='';w.append(carEl([p.img,...s.docs.map(d=>d.data().d)]))}).catch(showErr);
+ const d=e.querySelector('.dl');if(d)d.onclick=async()=>{if(confirm('Excluir esta publicação?')){if(p.n>1){const s=await db.collection('posts').doc(id).collection('imgs').get();for(const k of s.docs)await k.ref.delete()}await db.collection('posts').doc(id).delete();e.remove()}};return e}
+function carEl(srcs){const w=document.createElement('div');w.className='mw';
+ w.innerHTML=`<div class="car">${srcs.map(s=>`<img src="${s}">`).join('')}</div><button class="nv l">‹</button><button class="nv r">›</button><div class="dots">${srcs.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`;
+ const c=w.querySelector('.car'),d=w.querySelectorAll('.dots i'),go2=k=>c.scrollTo({left:k*c.clientWidth,behavior:'smooth'});
+ c.onscroll=()=>{const k=Math.round(c.scrollLeft/c.clientWidth);d.forEach((x,i)=>x.classList.toggle('on',i==k))};
+ d.forEach((x,i)=>x.onclick=()=>go2(i));w.querySelector('.l').onclick=()=>c.scrollBy({left:-c.clientWidth,behavior:'smooth'});w.querySelector('.r').onclick=()=>c.scrollBy({left:c.clientWidth,behavior:'smooth'});return w}
+async function carousel(files){
+ files=files.filter(f=>f.type.startsWith('image/'));if(files.length>10){toast('Máximo de 10 fotos por post');files=files.slice(0,10)}
+ if((await db.collection('posts').where('uid','==',me.uid).get()).size>=100)return toast('Limite de 100 publicações atingido. Exclua alguma.');
+ const m=modal('<p class="mt">Preparando imagens...</p>'),b=m.querySelector('.box'),imgs=[];
+ for(const f of files)imgs.push(await shrink(f,1280,240e3));
+ const auds=await db.collection('audios').where('uid','==',me.uid).get();
+ b.innerHTML='<div id="pv"></div><input id="tx" placeholder="Legenda da publicação" maxlength="500"><select id="sa"><option value="">Sem áudio</option>'+auds.docs.map(d=>`<option value="${d.id}">${esc(d.data().name)}</option>`).join('')+'</select><div class="row"><button class="btn s" id="cx">Cancelar</button><button class="btn" id="pb">Publicar</button></div>';
+ b.querySelector('#pv').append(carEl(imgs));b.querySelector('#cx').onclick=()=>m.remove();
+ b.querySelector('#pb').onclick=async e=>{const bt=e.target;bt.disabled=true;bt.textContent='Publicando...';
+  try{const r=await db.collection('posts').add({uid:me.uid,name:me.name,avatar:me.photo&&me.photo.length<60000?me.photo:'',img:imgs[0],n:imgs.length,audio:b.querySelector('#sa').value,cap:b.querySelector('#tx').value.trim(),likes:[],ts:TS()});
+   for(let i=1;i<imgs.length;i++)await r.collection('imgs').doc(String(i).padStart(2,'0')).set({i,d:imgs[i]});m.remove();go('feed')}
+  catch(x){showErr(x);bt.disabled=false;bt.textContent='Publicar'}}}
 // EXPLORAR
 function userRow(id,u){const e=document.createElement('div');e.className='card ph';e.style.cursor='pointer';e.innerHTML=`<img class="av" src="${u.photo||ICON}"><div><b>${esc(u.name)}</b><div class="mt">${esc(u.bio||'')}</div></div>`;e.onclick=()=>viewProfile(id);return e}
 function grid(box,docs){box.innerHTML='';docs.forEach(d=>{const i=document.createElement('img');i.src=d.data().img;i.loading='lazy';i.onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(d.id,d.data()))};box.append(i)});if(!docs.length)box.innerHTML='<p class="mt" style="grid-column:1/-1">Nada por aqui ainda.</p>'}
@@ -223,7 +247,7 @@ function msg(){$('#main').innerHTML=`<div class="row w" style="margin-bottom:10p
  unsub=db.collection('chats').where('members','array-contains',me.uid).onSnapshot(s=>{const l=$('#cl');if(!l)return;l.innerHTML=s.empty?'<p class="mt">Nenhuma conversa ainda. Use + DM, + Grupo ou Explorar para entrar numa comunidade.</p>':'';s.forEach(d=>{const x=d.data(),nm=x.type=='dm'?Object.entries(x.names||{}).find(([k])=>k!=me.uid)?.[1]||'DM':x.name,e=document.createElement('div');e.className='ci'+(cu==d.id?' on':'');e.textContent=({dm:'💬 ',group:'👥 ',community:'🌐 '})[x.type]+nm;e.onclick=()=>openChat(d.id,nm);l.append(e)})},showErr)}
 let mu=null;
 function openChat(id,nm){cu=id;if(mu)mu();$('#cl').classList.add('hide');$('#cv2').classList.remove('hide');$('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start"><button class="btn s" id="bk" style="flex:none">←</button><b>${esc(nm)}</b></div><div class="msgs" id="ms"></div><div class="row inp"><input id="mi" placeholder="Mensagem" autocomplete="off" enterkeyhint="send"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
- $('#bk').onclick=()=>{cu=null;if(mu){mu();mu=null}$('#cv2').classList.add('hide');$('#cl').classList.remove('hide')};const send=async()=>{const t=$('#mi').value.trim();if(!t)return;$('#mi').value='';await db.collection('chats').doc(id).collection('msgs').add({uid:me.uid,name:me.name,t,ts:TS()})};$('#sd').onclick=send;$('#mi').onkeydown=e=>e.key=='Enter'&&send();
+ $('#bk').onclick=()=>{cu=null;if(mu){mu();mu=null}$('#cv2').classList.add('hide');$('#cl').classList.remove('hide')};const send=async()=>{const t=$('#mi').value.trim();if(!t)return;$('#mi').value='';await db.collection('chats').doc(id).collection('msgs').add({uid:me.uid,name:me.name,t,ts:TS()})};$('#sd').onclick=send;$('#mi').onkeydown=e=>{if(e.key=='Enter')send()};
  mu=db.collection('chats').doc(id).collection('msgs').orderBy('ts','desc').limit(100).onSnapshot(s=>{const b=$('#ms');if(!b)return;b.innerHTML='';s.docs.reverse().forEach(d=>{const x=d.data(),e=document.createElement('div');e.className='m'+(x.uid==me.uid?' me':'');e.innerHTML=`<small>${esc(x.name)}</small>${esc(x.t)}`;b.append(e)});window.scrollTo(0,document.body.scrollHeight)},showErr)}
 setMode(false);document.querySelectorAll('.lob').forEach(b=>b.onclick=()=>auth.signOut());
 </script></body></html>
