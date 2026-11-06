@@ -42,21 +42,28 @@ canvas{width:100%;border-radius:12px;touch-action:none;background:#000}
 .toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#0b1620;color:#fff;padding:10px 18px;border-radius:12px;z-index:99;box-shadow:var(--sh)}
 .av[src^="data:image/png"],.st img[src^="data:image/png"]{object-fit:contain;padding:24%;background-color:var(--in)}
 .btn{white-space:nowrap}.pf .row>*{flex:0 0 auto}.pf>div{min-width:0}
-@media all{
+@media(max-width:760px){
 #app{padding-left:0;padding-bottom:70px}
 header{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:9;background:var(--sf);border-bottom:1px solid var(--bd);padding:8px 14px}header .lg{height:30px}
 #side{top:auto;width:100%;height:62px;flex-direction:row;padding:0;border-right:0;border-top:1px solid var(--bd)}
 #side .lg,.sb{display:none}nav{flex-direction:row}
 nav button{flex:1;flex-direction:column;gap:2px;justify-content:center;align-items:center;font-size:10px;padding:6px;border-radius:0}nav button i{font-size:20px}
 .chat{grid-template-columns:1fr}.pf{flex-direction:column;text-align:center}}
-body{background:var(--in);-webkit-tap-highlight-color:transparent}
+body{-webkit-tap-highlight-color:transparent}
 input,select{font-size:16px}
-#app{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg)}
+#app{min-height:100vh}
 header .row{flex:none;gap:6px}header .row>*{flex:none;padding:7px 12px}
-#side{padding-bottom:env(safe-area-inset-bottom);height:calc(62px + env(safe-area-inset-bottom))}
-@media(min-width:761px){#app{border-left:1px solid var(--bd);border-right:1px solid var(--bd)}#side{left:50%;transform:translateX(-50%);max-width:520px;border-left:1px solid var(--bd);border-right:1px solid var(--bd)}}
 .row.w{flex-wrap:wrap}.row.w>*{flex:1 1 auto;padding:8px 10px;font-size:13px}
 .msgs{height:calc(100vh - 300px);min-height:220px}
+@media(min-width:761px){
+#app{padding-left:240px}
+main{max-width:740px;padding:26px 28px}
+.chat{grid-template-columns:270px 1fr}
+#cl.hide{display:flex!important}#bk{display:none}
+#cv2.hide{display:block!important;color:var(--mut)}#cv2.hide::before{content:'Selecione uma conversa'}
+.msgs{height:60vh}
+}
+@media(max-width:760px){#side{padding-bottom:env(safe-area-inset-bottom);height:calc(62px + env(safe-area-inset-bottom))}}
 </style></head><body>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy">
@@ -68,9 +75,9 @@ header .row{flex:none;gap:6px}header .row>*{flex:none;padding:7px 12px}
 <p class="rc">Protegido pelo reCAPTCHA<br>Aplicam-se a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" style="color:var(--ac)">Política de Privacidade</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener" style="color:var(--ac)">Termos de Serviço</a> do Google.</p>
 </section>
 <div id="app" class="hide">
-<header><img class="lg" id="lgH" alt="Vizzy"><div class="row"><button class="btn s" id="th2" title="Tema">🌓</button><button class="btn s" id="lo">Sair</button></div></header>
+<header><img class="lg" id="lgH" alt="Vizzy"><div class="row"><button class="btn s thb" title="Tema">🌓</button><button class="btn s lob">Sair</button></div></header>
 <aside id="side"><img class="lg" id="lgS" alt="Vizzy">
-<nav><button data-v="feed"><i>🏠</i><span>Início</span></button><button data-v="exp"><i>🔎</i><span>Explorar</span></button><button data-v="aud"><i>🎵</i><span>Áudios</span></button><button data-v="msg"><i>💬</i><span>Mensagens</span></button><button data-v="me"><i>👤</i><span>Perfil</span></button></nav></aside>
+<nav><button data-v="feed"><i>🏠</i><span>Início</span></button><button data-v="exp"><i>🔎</i><span>Explorar</span></button><button data-v="aud"><i>🎵</i><span>Áudios</span></button><button data-v="msg"><i>💬</i><span>Mensagens</span></button><button data-v="me"><i>👤</i><span>Perfil</span></button></nav><div class="sb"><button class="btn s thb">🌓 Tema</button><button class="btn s lob">Sair</button></div></aside>
 <main id="main"></main></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-auth-compat.min.js"></script>
@@ -91,7 +98,7 @@ let me=null,signup=false;
 // tema
 function theme(t){document.documentElement.dataset.t=t;try{localStorage.vt=t}catch(e){}$('#lgA').src=$('#lgH').src=$('#lgS').src=t=='dark'?LOGO:LOGOB}
 theme((()=>{try{return localStorage.vt}catch(e){}})()||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
-$('#th2').onclick=()=>theme(document.documentElement.dataset.t=='dark'?'light':'dark');
+document.querySelectorAll('.thb').forEach(b=>b.onclick=()=>theme(document.documentElement.dataset.t=='dark'?'light':'dark'));
 // utilidades
 const readURL=f=>new Promise(r=>{const x=new FileReader;x.onload=()=>r(x.result);x.readAsDataURL(f)});
 const loadImg=src=>new Promise(r=>{const i=new Image;i.onload=()=>r(i);i.src=src});
@@ -198,5 +205,5 @@ let mu=null;
 function openChat(id,nm){cu=id;if(mu)mu();$('#cl').classList.add('hide');$('#cv2').classList.remove('hide');$('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start"><button class="btn s" id="bk" style="flex:none">←</button><b>${esc(nm)}</b></div><div class="msgs" id="ms"></div><div class="row"><input id="mi" placeholder="Mensagem"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
  $('#bk').onclick=()=>{cu=null;if(mu){mu();mu=null}$('#cv2').classList.add('hide');$('#cl').classList.remove('hide')};const send=async()=>{const t=$('#mi').value.trim();if(!t)return;$('#mi').value='';await db.collection('chats').doc(id).collection('msgs').add({uid:me.uid,name:me.name,t,ts:TS()})};$('#sd').onclick=send;$('#mi').onkeydown=e=>e.key=='Enter'&&send();
  mu=db.collection('chats').doc(id).collection('msgs').orderBy('ts','desc').limit(100).onSnapshot(s=>{const b=$('#ms');if(!b)return;b.innerHTML='';s.docs.reverse().forEach(d=>{const x=d.data(),e=document.createElement('div');e.className='m'+(x.uid==me.uid?' me':'');e.innerHTML=`<small>${esc(x.name)}</small>${esc(x.t)}`;b.append(e)});b.scrollTop=b.scrollHeight},showErr)}
-setMode(false);$('#lo').onclick=()=>auth.signOut();
+setMode(false);document.querySelectorAll('.lob').forEach(b=>b.onclick=()=>auth.signOut());
 </script></body></html>
