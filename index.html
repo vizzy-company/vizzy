@@ -64,6 +64,9 @@ main{max-width:740px;padding:26px 28px}
 .msgs{height:60vh}
 }
 @media(max-width:760px){#side{padding-bottom:env(safe-area-inset-bottom);height:calc(62px + env(safe-area-inset-bottom))}}
+.msgs{height:auto!important;min-height:30vh;overflow:visible}
+.inp{position:sticky;bottom:calc(66px + env(safe-area-inset-bottom));background:var(--sf);padding:8px 0;z-index:6}
+@media(min-width:761px){.inp{bottom:0}}
 </style></head><body>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy">
@@ -219,8 +222,8 @@ function msg(){$('#main').innerHTML=`<div class="row w" style="margin-bottom:10p
  $('#n4').onclick=async()=>{const s=await db.collection('chats').where('type','==','community').limit(30).get(),m=modal('<h3>Comunidades</h3><div id="ex"></div>');s.forEach(d=>{const x=d.data(),j=x.members.includes(me.uid),e=document.createElement('div');e.className='ph';e.innerHTML=`<b style="flex:1">${esc(x.name)} <small>(${x.members.length})</small></b>`+(j?'<small>Membro</small>':'<button class="btn">Entrar</button>');const b=e.querySelector('button');if(b)b.onclick=async()=>{await d.ref.update({members:firebase.firestore.FieldValue.arrayUnion(me.uid)});b.remove()};m.querySelector('#ex').append(e)})};
  unsub=db.collection('chats').where('members','array-contains',me.uid).onSnapshot(s=>{const l=$('#cl');if(!l)return;l.innerHTML=s.empty?'<p class="mt">Nenhuma conversa ainda. Use + DM, + Grupo ou Explorar para entrar numa comunidade.</p>':'';s.forEach(d=>{const x=d.data(),nm=x.type=='dm'?Object.entries(x.names||{}).find(([k])=>k!=me.uid)?.[1]||'DM':x.name,e=document.createElement('div');e.className='ci'+(cu==d.id?' on':'');e.textContent=({dm:'💬 ',group:'👥 ',community:'🌐 '})[x.type]+nm;e.onclick=()=>openChat(d.id,nm);l.append(e)})},showErr)}
 let mu=null;
-function openChat(id,nm){cu=id;if(mu)mu();$('#cl').classList.add('hide');$('#cv2').classList.remove('hide');$('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start"><button class="btn s" id="bk" style="flex:none">←</button><b>${esc(nm)}</b></div><div class="msgs" id="ms"></div><div class="row"><input id="mi" placeholder="Mensagem"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
+function openChat(id,nm){cu=id;if(mu)mu();$('#cl').classList.add('hide');$('#cv2').classList.remove('hide');$('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start"><button class="btn s" id="bk" style="flex:none">←</button><b>${esc(nm)}</b></div><div class="msgs" id="ms"></div><div class="row inp"><input id="mi" placeholder="Mensagem" autocomplete="off" enterkeyhint="send"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
  $('#bk').onclick=()=>{cu=null;if(mu){mu();mu=null}$('#cv2').classList.add('hide');$('#cl').classList.remove('hide')};const send=async()=>{const t=$('#mi').value.trim();if(!t)return;$('#mi').value='';await db.collection('chats').doc(id).collection('msgs').add({uid:me.uid,name:me.name,t,ts:TS()})};$('#sd').onclick=send;$('#mi').onkeydown=e=>e.key=='Enter'&&send();
- mu=db.collection('chats').doc(id).collection('msgs').orderBy('ts','desc').limit(100).onSnapshot(s=>{const b=$('#ms');if(!b)return;b.innerHTML='';s.docs.reverse().forEach(d=>{const x=d.data(),e=document.createElement('div');e.className='m'+(x.uid==me.uid?' me':'');e.innerHTML=`<small>${esc(x.name)}</small>${esc(x.t)}`;b.append(e)});b.scrollTop=b.scrollHeight},showErr)}
+ mu=db.collection('chats').doc(id).collection('msgs').orderBy('ts','desc').limit(100).onSnapshot(s=>{const b=$('#ms');if(!b)return;b.innerHTML='';s.docs.reverse().forEach(d=>{const x=d.data(),e=document.createElement('div');e.className='m'+(x.uid==me.uid?' me':'');e.innerHTML=`<small>${esc(x.name)}</small>${esc(x.t)}`;b.append(e)});window.scrollTo(0,document.body.scrollHeight)},showErr)}
 setMode(false);document.querySelectorAll('.lob').forEach(b=>b.onclick=()=>auth.signOut());
 </script></body></html>
