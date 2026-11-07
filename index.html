@@ -117,6 +117,7 @@ nav button{position:relative;transition:.15s}nav button svg{display:block}nav bu
 .bn.bp{margin:6px 0 10px;width:100%;height:90px;border-radius:12px}
 .card.pf{flex-wrap:wrap;align-items:flex-start;row-gap:14px}.pf>div:not(.bn){flex:1}.card.pf .av.big{margin-top:-58px;position:relative}
 @media(max-width:760px){.card.pf{align-items:center}.pf>div:not(.bn){flex:none}}
+#cv{touch-action:none;cursor:grab}
 </style></head><body>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -237,10 +238,16 @@ async function carousel(files){
   catch(x){showErr(x);bt.disabled=false;bt.textContent='Publicar'}}}
 // EXPLORAR
 function userRow(id,u){const e=document.createElement('div');e.className='card ph';e.style.cursor='pointer';e.innerHTML=`<img class="av" src="${u.photo||ICON}"><div><b>${esc(u.name)}${u.type=='personal'?' 🔒':''}</b><div class="mt">${esc(u.bio||'')}</div></div>`;e.onclick=()=>viewProfile(id);return e}
-function grid(box,docs){box.innerHTML='';docs.forEach(d=>{const i=document.createElement('img');i.src=d.data().img;i.loading='lazy';i.onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(d.id,d.data()))};box.append(i)});if(!docs.length)box.innerHTML='<p class="mt" style="grid-column:1/-1">Nada por aqui ainda.</p>'}
-async function exp(){$('#main').innerHTML=`<input id="q" placeholder="🔎 Buscar pessoas pelo nome"><div id="ur"></div><h3>Em alta</h3><div class="grid" id="gr"></div>`;
+function grid(box,docs,add){if(!add)box.innerHTML='';docs.forEach(d=>{const i=document.createElement('img');i.src=d.data().img;i.loading='lazy';i.onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(d.id,d.data()))};box.append(i)});if(!docs.length&&!add)box.innerHTML='<p class="mt" style="grid-column:1/-1">Nada por aqui ainda.</p>'}
+async function exp(){$('#main').innerHTML=`<input id="q" placeholder="🔎 Buscar pessoas pelo nome"><div id="ur"></div><h3>Descobrir</h3><div class="grid" id="gr"></div><div id="gs" class="mt" style="text-align:center;padding:18px"></div>`;
  $('#q').oninput=async e=>{const v=e.target.value.trim(),b=$('#ur');b.innerHTML='';if(!v)return;const s=await db.collection('users').orderBy('name').startAt(v).endAt(v+'\uf8ff').limit(8).get();s.forEach(d=>b.append(userRow(d.id,d.data())));if(s.empty)b.innerHTML='<p class="mt">Ninguém encontrado.</p>'};
- grid($('#gr'),(await db.collection('posts').orderBy('ts','desc').limit(30).get()).docs.sort((a,b)=>(b.data().likes||[]).length-(a.data().likes||[]).length))}
+ let last=null,busy=false,done=false,first=true;const sn=$('#gs'),io=new IntersectionObserver(es=>{if(es[0].isIntersecting)more()},{rootMargin:'700px'});
+ async function more(){if(!$('#gr')){io.disconnect();return}if(busy||done)return;busy=true;sn.textContent='Carregando...';
+  try{let q=db.collection('posts').orderBy('ts','desc');if(last)q=q.startAfter(last);const r=await q.limit(24).get();grid($('#gr'),r.docs,!first);first=false;
+   if(r.docs.length)last=r.docs[r.docs.length-1];
+   if(r.docs.length<24){done=true;io.disconnect();sn.textContent=last?'Você chegou ao fim ✨':''}else{sn.textContent='';io.unobserve(sn);io.observe(sn)}}
+  catch(e){sn.textContent='';showErr(e,'carregar')}busy=false}
+ io.observe(sn)}
 // STORIES
 const gifHTML=g=>(g||[]).map(o=>`<img class="gf" src="${esc(o.u)}" style="left:${+o.x}%;top:${+o.y}%;width:${+o.w}%">`).join('');
 async function loadStories(){const box=$('#sts');if(!box)return;
@@ -283,6 +290,7 @@ async function editor(file,col){
  <div class="row"><span class="mt" style="flex:none">Tamanho do item</span><input type="range" id="sz" min="40" max="250" value="100"></div>
  ${col=='posts'?'<input id="tx" placeholder="Legenda da publicação" maxlength="500">':''}
  <select id="sa"><option value="">Sem áudio</option>${auds.docs.map(d=>`<option value="${d.id}">${esc(d.data().name)}</option>`).join('')}</select>
+ <div class="row w" id="mv"><span class="mt" style="flex:none">Mover texto</span><button class="btn s" data-p="t">⬆ Topo</button><button class="btn s" data-p="c">⏺ Meio</button><button class="btn s" data-p="b">⬇ Base</button><button class="btn s" data-n="-1,0">◀</button><button class="btn s" data-n="1,0">▶</button><button class="btn s" data-n="0,-1">▲</button><button class="btn s" data-n="0,1">▼</button></div>
  <div class="row w"><button class="btn s" id="sk">+ Adesivo</button><button class="btn s" id="gf">+ GIF</button><button class="btn s" id="un">↩ Desfazer</button></div>
  <button class="btn" id="pb" style="width:100%;margin-top:6px">Publicar</button>`);
  const $m=s=>m.querySelector(s),cv=$m('#cv'),c=cv.getContext('2d'),ew=$m('#ew');cv.width=base.width;cv.height=base.height;
@@ -294,6 +302,9 @@ async function editor(file,col){
    const x0=T.x-w/2,y0=T.y-h/2;if(T.bg){c.fillStyle=T.bg==1?'rgba(0,0,0,.6)':'rgba(255,255,255,.8)';c.fillRect(x0,y0,w,h)}
    c.fillStyle=T.color;if(!T.bg){c.lineWidth=f/7;c.strokeStyle='#000';c.lineJoin='round'}
    L.forEach((l,i)=>{const yy=y0+p/2+lh*(i+.5);if(!T.bg)c.strokeText(l,T.x,yy);c.fillText(l,T.x,yy)});T.bb={x:x0,y:y0,w,h}}};draw();
+ const clampT=()=>{T.x=Math.min(cv.width,Math.max(0,T.x));T.y=Math.min(cv.height,Math.max(0,T.y))};
+ $m('#mv').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{if(!T.t||!T.bb)return toast('Escreva um texto primeiro');const h=T.bb.h,k=b.dataset.p;T.x=cv.width/2;T.y=k=='t'?h/2+cv.height*.06:k=='c'?cv.height/2:cv.height-h/2-cv.height*.06;draw()});
+ $m('#mv').querySelectorAll('[data-n]').forEach(b=>{const[dx,dy]=b.dataset.n.split(',').map(Number);b.onclick=()=>{if(!T.t||T.x==null)return toast('Escreva um texto primeiro');T.x+=dx*cv.width*.02;T.y+=dy*cv.height*.02;clampT();draw()}});
  $m('#cp').oninput=e=>{T.t=e.target.value;sel={k:'t'};draw()};
  $m('#tc').oninput=e=>{T.color=e.target.value;draw()};$m('#tf').onchange=e=>{T.font=FONTS[+e.target.value][1];draw()};$m('#tb').onchange=e=>{T.bg=+e.target.value;draw()};
  $m('#sz').oninput=e=>{const v=e.target.value/100;if(!sel||sel.k=='t')T.size=v;else{sel.o.sc=v;if(sel.k=='g')sel.o.el.style.width=sel.o.w0*v+'%'}draw()};
@@ -306,7 +317,7 @@ async function editor(file,col){
  $m('#un').onclick=()=>{const l=order.pop();if(!l)return;if(l.k=='s')st.splice(st.indexOf(l.o),1);else{gifs.splice(gifs.indexOf(l.o),1);l.o.el.remove()}sel=null;draw()};
  const pos=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
  cv.onpointerdown=e=>{const[x,y]=pos(e),s=[...st].reverse().find(s=>{const w=s.w0*s.sc;return x>s.x&&x<s.x+w&&y>s.y&&y<s.y+w*s.r});
-  if(s){sel={k:'s',o:s};dr={o:s,dx:x-s.x,dy:y-s.y}}else if(T.bb&&x>T.bb.x&&x<T.bb.x+T.bb.w&&y>T.bb.y&&y<T.bb.y+T.bb.h){sel={k:'t'};dr={o:T,dx:x-T.x,dy:y-T.y}}else{dr=null;return}
+  if(s){sel={k:'s',o:s};dr={o:s,dx:x-s.x,dy:y-s.y}}else if(T.bb&&x>T.bb.x-cv.width*.04&&x<T.bb.x+T.bb.w+cv.width*.04&&y>T.bb.y-cv.width*.04&&y<T.bb.y+T.bb.h+cv.width*.04){sel={k:'t'};dr={o:T,dx:x-T.x,dy:y-T.y}}else{dr=null;return}
   $m('#sz').value=(sel.k=='t'?T.size:sel.o.sc)*100;cv.setPointerCapture(e.pointerId)};
  cv.onpointermove=e=>{if(!dr)return;const[x,y]=pos(e);dr.o.x=x-dr.dx;dr.o.y=y-dr.dy;draw()};cv.onpointerup=()=>dr=null;
  $m('#pb').onclick=async e=>{const bt=e.target;bt.disabled=true;bt.textContent='Publicando...';
