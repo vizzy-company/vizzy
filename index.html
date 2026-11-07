@@ -137,6 +137,8 @@ body.boot #auth,body.boot #app{display:none!important}
 .chat>*{min-width:0}.msgs,.inp{min-width:0}.inp input{min-width:0;flex:1}.m{min-width:0;overflow-wrap:anywhere;word-break:break-word}.ci{overflow-wrap:anywhere}
 .rb{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:5px;vertical-align:middle;white-space:nowrap}.m.me .rb{background:#0003!important;color:#04202e!important;border-color:#04202e44!important}
 .mrow{display:flex;align-items:center;gap:10px;padding:6px 0}.mrow .av{width:30px;height:30px;flex:none}.mrow select{width:auto;max-width:140px;flex:none}
+.pks{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px;margin:0 0 10px}.pk{display:flex;align-items:center;gap:6px}.pk input{width:auto;flex:none;margin:0}
+.md{background:none;border:0;color:inherit;opacity:.55;font-size:11px;margin-left:8px;cursor:pointer;padding:0}.md:hover{opacity:1;text-decoration:underline}
 </style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -447,7 +449,7 @@ function openChat(id,nm){cu=id;if(mu)mu();let cd={},docs=[];
  $('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start;gap:8px"><button class="btn s" id="bk" style="flex:none">←</button><span id="hav"></span><b id="hnm" style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(nm)}</b><span id="hop"></span></div><div class="msgs" id="ms"></div><div class="row inp"><input id="mi" maxlength="1000" placeholder="Mensagem" autocomplete="off" enterkeyhint="send"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
  $('#bk').onclick=()=>{cu=null;if(mu){mu();mu=null}$('#cv2').classList.add('hide');$('#cl').classList.remove('hide')};
  const ref=db.collection('chats').doc(id),send=async()=>{const t=$('#mi').value.trim();if(!t)return;$('#mi').value='';await ref.collection('msgs').add({uid:me.uid,name:me.name,t,ts:TS()})};$('#sd').onclick=send;$('#mi').onkeydown=e=>{if(e.key=='Enter')send()};
- const draw=()=>{const b=$('#ms');if(!b)return;b.innerHTML='';docs.forEach(d=>{const x=d.data(),e=document.createElement('div'),r=cd.type&&cd.type!='dm'?roleOf(cd,x.uid):null;e.className='m'+(x.uid==me.uid?' me':'');e.innerHTML=`<small>${esc(x.name)}${r?badge(r):''}</small>${esc(x.t)}`;b.append(e)});window.scrollTo(0,document.body.scrollHeight)},
+ const draw=()=>{const b=$('#ms');if(!b)return;b.innerHTML='';docs.forEach(d=>{const x=d.data(),e=document.createElement('div'),r=cd.type&&cd.type!='dm'?roleOf(cd,x.uid):null;e.className='m'+(x.uid==me.uid?' me':'');const dm=cd.type&&cd.type!='dm',cdel=dm&&(x.uid==me.uid||permsOf(cd,me.uid).includes('del'));e.innerHTML=`<small>${esc(x.name)}${r?badge(r):''}${cdel?'<button class="md" title="Apagar mensagem">apagar</button>':''}</small>${esc(x.t)}`;if(cdel)e.querySelector('.md').onclick=async()=>{try{await ref.collection('msgs').doc(d.id).delete()}catch(er){showErr(er,'apagar mensagem')}};b.append(e)});window.scrollTo(0,document.body.scrollHeight)},
  hdr=()=>{const av=$('#hav');if(!av||!cd.type||cd.type=='dm')return;av.innerHTML=cd.photo?`<img class="av" style="width:34px;height:34px" src="${esc(cd.photo)}">`:'';$('#hnm').textContent=cd.name||nm;$('#hop').innerHTML='<button class="btn s" id="mg" style="flex:none">⚙ Gerenciar</button>';$('#mg').onclick=()=>manage(id)},
  u1=ref.onSnapshot(c=>{cd=c.data()||{};hdr();draw()},showErr),
  u2=ref.collection('msgs').orderBy('ts','desc').limit(100).onSnapshot(s=>{docs=s.docs.reverse();draw()},showErr);
@@ -542,29 +544,35 @@ async function delChat(ref,x){if(!confirm('Apagar "'+x.name+'" para todos? As me
 
 const roleOf=(x,u)=>u==x.owner?{n:'Dono',c:'#f5a524'}:((x.roles||[]).find(r=>r.id==(x.mroles||{})[u])||null),
  badge=r=>`<span class="rb" style="background:${esc(r.c)}22;color:${esc(r.c)};border:1px solid ${esc(r.c)}66">${esc(r.n)}</span>`;
+const PERMS=[['del','Apagar mensagens'],['kick','Remover membros'],['assign','Atribuir cargos'],['img','Alterar imagem']],
+ permsOf=(x,u)=>u==x.owner?PERMS.map(q=>q[0]):((roleOf(x,u)||{}).p||[]);
 async function manage(id){const ref=db.collection('chats').doc(id),m=modal('<p class="mt">Carregando...</p>'),box=m.querySelector('.box'),FV=firebase.firestore.FieldValue;
  const render=async()=>{const x=(await ref.get()).data();if(!x){m.remove();return}
   const isC=x.type=='community',own=x.owner==me.uid||(!x.owner&&(x.type=='group'||x.members.length<=1));
   if(own&&!x.owner){await ref.update({owner:me.uid});x.owner=me.uid}
-  const roles=x.roles||[],mr=x.mroles||{};
+  const roles=x.roles||[],mr=x.mroles||{},my=own?PERMS.map(q=>q[0]):permsOf(x,me.uid),has=q=>my.includes(q),sub=a=>(a||[]).every(q=>my.includes(q)),canImg=own||has('img'),
+  pchk=r=>PERMS.map(([k,l])=>`<label class="pk"><input type="checkbox" data-k="${k}"${(r.p||[]).includes(k)?' checked':''}> ${l}</label>`).join('');
   box.innerHTML=`<h3>${esc(x.name)}</h3><p class="mt">${isC?'Comunidade':'Grupo'} · ${x.members.length} membro${x.members.length==1?'':'s'}</p>
-  <div class="mrow">${x.photo?`<img class="av" style="width:56px;height:56px" src="${esc(x.photo)}">`:'<span style="font-size:34px">'+(isC?'🌐':'👥')+'</span>'}${own?'<button class="btn s" id="gi" style="flex:none">🖼 Trocar imagem</button>':''}${own&&x.photo?'<button class="lnk" id="gx">Remover</button>':''}</div>
-  ${isC&&own?`<h4 style="margin:14px 0 4px">Cargos</h4>${roles.map(r=>`<div class="mrow">${badge(r)}<span style="flex:1"></span><button class="lnk" data-d="${esc(r.id)}">Excluir</button></div>`).join('')||'<p class="mt">Nenhum cargo criado ainda.</p>'}<div class="row" style="margin-top:6px"><input id="rn" maxlength="20" placeholder="Nome do cargo"><input id="rc" type="color" value="#3bb5ff" style="flex:none;width:46px;padding:2px"><button class="btn" id="ra" style="flex:none">Criar</button></div>`:''}
+  ${!own&&my.length?`<p class="mt">Suas permissões: ${PERMS.filter(q=>my.includes(q[0])).map(q=>q[1]).join(', ')}</p>`:''}
+  <div class="mrow">${x.photo?`<img class="av" style="width:56px;height:56px" src="${esc(x.photo)}">`:'<span style="font-size:34px">'+(isC?'🌐':'👥')+'</span>'}${canImg?'<button class="btn s" id="gi" style="flex:none">🖼 Trocar imagem</button>':''}${canImg&&x.photo?'<button class="lnk" id="gx">Remover</button>':''}</div>
+  ${isC&&own?`<h4 style="margin:14px 0 4px">Cargos</h4>${roles.map(r=>`<div class="rr" data-r="${esc(r.id)}"><div class="mrow">${badge(r)}<span style="flex:1"></span><button class="lnk" data-d="${esc(r.id)}">Excluir</button></div><div class="pks">${pchk(r)}</div></div>`).join('')||'<p class="mt">Nenhum cargo criado ainda.</p>'}<h4 style="margin:12px 0 4px">Novo cargo</h4><div class="row" style="margin-bottom:6px"><input id="rn" maxlength="20" placeholder="Nome do cargo"><input id="rc" type="color" value="#3bb5ff" style="flex:none;width:46px;padding:2px"></div><div class="pks" id="np">${pchk({})}</div><button class="btn" id="ra">Criar cargo</button>`:''}
   <h4 style="margin:14px 0 4px">Membros</h4><div id="ml"><p class="mt">Carregando...</p></div>
   <div class="row" style="margin-top:12px"><button class="btn s" id="lv">Sair</button>${own?'<button class="btn s" id="dl" style="color:#e5484d">Apagar</button>':''}</div>`;
   const run=fn=>async e=>{try{await fn(e)}catch(er){showErr(er,'gerenciar')}};
-  if(own){$('#gi').onclick=run(async()=>{const f=await pick('image/*');if(!f)return;await ref.update({photo:await shrink(f,256,45e3)});toast('Imagem atualizada');render()});
-   const gx=$('#gx');if(gx)gx.onclick=run(async()=>{await ref.update({photo:FV.delete()});render()});
-   $('#dl').onclick=()=>{m.remove();delChat(ref,x)}}
-  if(isC&&own){$('#ra').onclick=run(async()=>{const n=$('#rn').value.trim(),c=$('#rc').value;if(n.length<2)return toast('Nome do cargo muito curto');if(roles.length>=15)return toast('Limite de 15 cargos');if(!/^#[0-9a-f]{6}$/i.test(c))return;
-    await ref.update({roles:FV.arrayUnion({id:Math.random().toString(36).slice(2,8),n,c})});render()});
+  if(canImg){$('#gi').onclick=run(async()=>{const f=await pick('image/*');if(!f)return;await ref.update({photo:await shrink(f,256,45e3)});toast('Imagem atualizada');render()});
+   const gx=$('#gx');if(gx)gx.onclick=run(async()=>{await ref.update({photo:FV.delete()});render()})}
+  if(own)$('#dl').onclick=()=>{m.remove();delChat(ref,x)};
+  if(isC&&own){$('#ra').onclick=run(async()=>{const n=$('#rn').value.trim(),c=$('#rc').value,pp=[...$('#np').querySelectorAll('input:checked')].map(i=>i.dataset.k);if(n.length<2)return toast('Nome do cargo muito curto');if(roles.length>=15)return toast('Limite de 15 cargos');if(!/^#[0-9a-f]{6}$/i.test(c))return;
+    await ref.update({roles:FV.arrayUnion({id:Math.random().toString(36).slice(2,8),n,c,p:pp})});render()});
+   box.querySelectorAll('.rr').forEach(w=>w.querySelectorAll('input').forEach(i=>i.onchange=run(async()=>{const t=roles.find(r=>r.id==w.dataset.r);t.p=[...w.querySelectorAll('input:checked')].map(c=>c.dataset.k);await ref.update({roles});toast('Permissões salvas')})));
    box.querySelectorAll('[data-d]').forEach(b=>b.onclick=run(async()=>{const rid=b.dataset.d,up={roles:roles.filter(r=>r.id!=rid)};Object.keys(mr).forEach(u=>{if(mr[u]==rid)up['mroles.'+u]=FV.delete()});await ref.update(up);render()}))}
   $('#lv').onclick=run(async()=>{if(x.owner==me.uid)return toast('O dono não pode sair. Apague ou deixe o grupo como está.');if(!confirm('Sair de "'+x.name+'"?'))return;await ref.update({members:FV.arrayRemove(me.uid)});m.remove();const b=$('#bk');b&&b.click()});
   const us=await Promise.all(x.members.slice(0,50).map(u=>db.collection('users').doc(u).get())),ml=$('#ml');if(!ml)return;ml.innerHTML='';
-  us.forEach(d=>{if(!d.exists)return;const u=d.data(),r=roleOf(x,d.id),e=document.createElement('div');e.className='mrow';
+  us.forEach(d=>{if(!d.exists)return;const u=d.data(),r=roleOf(x,d.id),e=document.createElement('div'),canMod=d.id!=x.owner&&d.id!=me.uid&&(own||sub(permsOf(x,d.id)));e.className='mrow';
    e.innerHTML=`<img class="av" src="${esc(u.photo||ICON)}"><div style="flex:1;min-width:0"><b>${esc(u.name)}</b>${r?badge(r):''}${u.handle?`<div class="mt">@${esc(u.handle)}</div>`:''}</div>`;
-   if(isC&&own&&d.id!=x.owner){const sel=document.createElement('select');sel.innerHTML='<option value="">Sem cargo</option>'+roles.map(r=>`<option value="${esc(r.id)}"${mr[d.id]==r.id?' selected':''}>${esc(r.n)}</option>`).join('');
+   if(isC&&canMod&&(own||has('assign'))){const sel=document.createElement('select');sel.innerHTML='<option value="">Sem cargo</option>'+roles.filter(r=>own||sub(r.p)).map(r=>`<option value="${esc(r.id)}"${mr[d.id]==r.id?' selected':''}>${esc(r.n)}</option>`).join('');
     sel.onchange=run(async()=>{await ref.update({['mroles.'+d.id]:sel.value||FV.delete()});toast('Cargo atualizado');render()});e.append(sel)}
+   if(canMod&&(own||has('kick'))){const k=document.createElement('button');k.className='lnk';k.textContent='Remover';k.style.color='#e5484d';k.onclick=run(async()=>{if(!confirm('Remover '+u.name+' de "'+x.name+'"?'))return;await ref.update({members:FV.arrayRemove(d.id),['mroles.'+d.id]:FV.delete()});toast('Membro removido');render()});e.append(k)}
    ml.append(e)})};
  render().catch(e=>{m.remove();showErr(e,'gerenciar')})}
 async function profComms(uid){try{const s=await db.collection('chats').where('type','==','community').limit(100).get(),L=s.docs.filter(d=>(d.data().members||[]).includes(uid)),b=$('#pco');if(!b||!L.length)return;
