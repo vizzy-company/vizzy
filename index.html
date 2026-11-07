@@ -139,6 +139,14 @@ body.boot #auth,body.boot #app{display:none!important}
 .mrow{display:flex;align-items:center;gap:10px;padding:6px 0}.mrow .av{width:30px;height:30px;flex:none}.mrow select{width:auto;max-width:140px;flex:none}
 .pks{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px;margin:0 0 10px}.pk{display:flex;align-items:center;gap:6px}.pk input{width:auto;flex:none;margin:0}
 .md{background:none;border:0;color:inherit;opacity:.55;font-size:11px;margin-left:8px;cursor:pointer;padding:0}.md:hover{opacity:1;text-decoration:underline}
+.cm_r{display:flex;gap:10px;align-items:flex-start;padding:8px 0}.cm_r .av{width:34px;height:34px;flex:none;cursor:pointer}.cm_r.rpl{margin-left:44px}.cm_r.rpl .av{width:26px;height:26px}
+.cm_b{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:1.35}.cm_b b{cursor:pointer}.cm_a{margin-top:2px}.cm_a .lnk{padding:0;font-size:12px;color:var(--mut);font-weight:600}.cm_at{color:var(--ac);font-weight:600}
+.cm_l{background:none;border:0;color:var(--mut);display:flex;flex-direction:column;align-items:center;font-size:11px;gap:2px;padding:4px;min-width:28px}.cm_l svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linejoin:round}.cm_l.on{color:#ff4d6d}.cm_l.on svg{fill:#ff4d6d;stroke:#ff4d6d}
+.cm_rp{font-size:12px;color:var(--mut);padding:4px 0}.cm_rp .lnk{padding:0 6px}
+.rl_sh{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;justify-content:flex-end;background:#0006;animation:fi .2s ease both}
+.rl_sp{background:var(--sf);color:var(--tx);border-radius:20px 20px 0 0;max-height:75vh;display:flex;flex-direction:column;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:up2 .25s ease-out}
+.rl_sp .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.rl_sp .cs{padding:0;display:flex;flex-direction:column;min-height:0;flex:1}.rl_sp .cl2{overflow:auto;min-height:140px;max-height:50vh}
+@keyframes up2{from{transform:translateY(100%)}}
 </style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -228,11 +236,8 @@ function postEl(id,p){const e=document.createElement('article');e.className='car
  const lk=e.querySelector('.lk'),r=()=>{const o=L.includes(me.uid);lk.classList.toggle('on',o);lk.innerHTML=heart(o)+'<span>'+L.length+'</span>'};r();
  lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];r();try{await R.update({likes:firebase.firestore.FieldValue[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir')}};
  e.querySelector('.mwh').ondblclick=()=>{burst(e.querySelector('.mwh'));if(!L.includes(me.uid))lk.click()};
- const cs=e.querySelector('.cs'),cl=cs.querySelector('.cl2'),inp=cs.querySelector('input'),col=R.collection('comments');let ld=0;
- const add=c=>{const d=document.createElement('p');d.className='cmt';d.innerHTML=`<b>${esc(c.name)}</b> ${esc(c.t)}`;cl.append(d)};
- inp.onkeydown=ev=>{if(ev.key=='Enter')cs.querySelector('.btn').click()};
- e.querySelector('.cm').onclick=async()=>{cs.classList.toggle('hide');if(!ld){ld=1;(await col.orderBy('ts').limit(50).get()).forEach(d=>add(d.data()))}};
- cs.querySelector('.btn').onclick=async()=>{const x=inp.value.trim();if(!x)return;inp.value='';add({name:me.name,t:x});await col.add({uid:me.uid,name:me.name,t:x,ts:TS()})};
+ const cs=e.querySelector('.cs'),CU=commentsUI(R,cs);let ld=0;
+ e.querySelector('.cm').onclick=()=>{cs.classList.toggle('hide');if(!ld){ld=1;CU.load().catch(showErr)}};
  if(p.audio)e.querySelector('.au').onclick=ev=>playAudio(p.audio,ev.target);
  if(p.n>1)R.collection('imgs').orderBy('i').get().then(s=>{const w=e.querySelector('.mwh');w.innerHTML='';w.append(carEl([p.img,...s.docs.map(d=>d.data().d)]))}).catch(showErr);
  const d=e.querySelector('.dl');if(d)d.onclick=async()=>{if(!confirm('Excluir esta publicação?'))return;
@@ -518,7 +523,7 @@ function reels(docs,start){if(!docs.length)return toast('Nada para mostrar ainda
   const lk=el.querySelector('.rl_lk'),r=()=>{lk.classList.toggle('on',L.includes(me.uid));lk.innerHTML=heart()+'<span>'+L.length+'</span>'};r();
   lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];r();try{await pref(id,p).update({likes:firebase.firestore.FieldValue[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir')}};
   el.querySelector('.rl_w').ondblclick=()=>{burst(el.querySelector('.rl_w'));if(!L.includes(me.uid))lk.click()};
-  el.querySelector('.rl_cm').onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(id,p))};
+  el.querySelector('.rl_cm').onclick=()=>{const sh=document.createElement('div');sh.className='rl_sh';sh.innerHTML='<div class="rl_sp"><div class="hd"><b>Comentários</b><button class="ib" id="sx">✕</button></div><div class="cs"></div></div>';o.append(sh);sh.onclick=ev=>{if(ev.target==sh)sh.remove()};sh.querySelector('#sx').onclick=()=>sh.remove();commentsUI(pref(id,p),sh.querySelector('.cs'),{prof:u=>{close();viewProfile(u)}}).load().catch(showErr)};
   el.querySelector('.rl_ur').onclick=()=>{close();viewProfile(p.uid)};
   sc.append(el);io.observe(el)}),
  more=async()=>{if(busy||end)return;busy=true;try{const q=await db.collection('posts').orderBy('ts','desc').startAfter(lastDoc).limit(12).get();if(q.size<12)end=true;if(q.size){lastDoc=q.docs[q.size-1];add(q.docs)}}catch(e){showErr(e,'carregar')}busy=false};
@@ -580,4 +585,25 @@ async function profComms(uid){try{const s=await db.collection('chats').where('ty
  L.forEach(d=>{const x=d.data(),r=roleOf(x,uid),mem=x.members.includes(me.uid),e=document.createElement('div');e.className='card';e.style.cssText='padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:12px';
   e.innerHTML=`${x.photo?`<img class="av" style="width:42px;height:42px;flex:none" src="${esc(x.photo)}">`:'<span style="font-size:28px">🌐</span>'}<div style="flex:1;min-width:0"><b>${esc(x.name)}</b>${r?badge(r):''}<div class="mt">${x.members.length} membro${x.members.length==1?'':'s'}</div></div><button class="btn s" style="flex:none">${mem?'Abrir':'Entrar'}</button>`;
   e.querySelector('button').onclick=async()=>{try{if(!mem)await d.ref.update({members:firebase.firestore.FieldValue.arrayUnion(me.uid)});go('msg');openChat(d.id,x.name)}catch(er){showErr(er,'comunidade')}};b.append(e)})}catch(e){}}
+
+const UC={},getU=u=>UC[u]||(UC[u]=db.collection('users').doc(u).get().then(d=>d.exists?d.data():{}).catch(()=>({})));
+function commentsUI(R,root,opt){opt=opt||{};const FV=firebase.firestore.FieldValue,col=R.collection('comments');
+ root.innerHTML='<div class="cl2"></div><div class="cm_rp hide"></div><div class="row"><input placeholder="Comentar..." maxlength="300"><button class="btn" style="flex:none">Enviar</button></div>';
+ const cl=root.querySelector('.cl2'),rp=root.querySelector('.cm_rp'),inp=root.querySelector('input'),btn=root.querySelector('.btn');let items=[],rep=null;
+ const prof=u=>(opt.prof||viewProfile)(u),clearRep=()=>{rep=null;rp.classList.add('hide')},
+ row=(c,isR)=>{const e=document.createElement('div');e.className='cm_r'+(isR?' rpl':'');let L=c.likes||[];
+  e.innerHTML=`<img class="av" src="${ICON}"><div class="cm_b"><div><b>${esc(c.name)}</b> <span class="mt">${ago(c.ts)}</span></div><div>${c.rto?'<span class="cm_at">@'+esc(c.rto)+'</span> ':''}${esc(c.t)}</div><div class="cm_a"><button class="lnk">Responder</button></div></div><button class="cm_l"></button>`;
+  getU(c.uid).then(u=>{if(u.photo)e.querySelector('.av').src=u.photo});
+  e.querySelector('.av').onclick=e.querySelector('b').onclick=()=>prof(c.uid);
+  const lk=e.querySelector('.cm_l'),r=()=>{lk.classList.toggle('on',L.includes(me.uid));lk.innerHTML=heart()+(L.length?'<span>'+L.length+'</span>':'')};r();
+  lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];c.likes=L;r();try{await col.doc(c.id).update({likes:FV[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir comentário')}};
+  e.querySelector('.cm_a .lnk').onclick=()=>{rep={parent:c.parent||c.id,to:c.name};rp.innerHTML='Respondendo a <b>'+esc(c.name)+'</b><button class="lnk">✕</button>';rp.classList.remove('hide');rp.querySelector('button').onclick=clearRep;inp.focus()};
+  return e},
+ draw=()=>{cl.innerHTML='';if(!items.length){cl.innerHTML='<p class="mt" style="padding:6px 0">Seja o primeiro a comentar.</p>';return}
+  items.filter(c=>!c.parent).forEach(c=>{cl.append(row(c,false));items.filter(k=>k.parent==c.id).forEach(k=>cl.append(row(k,true)))})};
+ btn.onclick=async()=>{const t=inp.value.trim();if(!t)return;inp.value='';const c={uid:me.uid,name:me.name,t,likes:[],ts:TS()};if(rep){c.parent=rep.parent;c.rto=rep.to}clearRep();
+  const tmp={...c,ts:null,id:'tmp'+Date.now()};items.push(tmp);draw();cl.scrollTop=cl.scrollHeight;
+  try{tmp.id=(await col.add(c)).id}catch(x){items=items.filter(i=>i!=tmp);draw();showErr(x,'comentar')}};
+ inp.onkeydown=ev=>{if(ev.key=='Enter')btn.click()};
+ return{load:async()=>{const s=await col.orderBy('ts').limit(200).get();items=s.docs.map(d=>({id:d.id,...d.data()}));draw()}}}
 </script></body></html>
