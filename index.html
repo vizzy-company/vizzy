@@ -118,11 +118,23 @@ nav button{position:relative;transition:.15s}nav button svg{display:block}nav bu
 .card.pf{flex-wrap:wrap;align-items:flex-start;row-gap:14px}.pf>div:not(.bn){flex:1}.card.pf .av.big{margin-top:-58px;position:relative}
 @media(max-width:760px){.card.pf{align-items:center}.pf>div:not(.bn){flex:none}}
 #cv{touch-action:none;cursor:grab}
+.rl_o{position:fixed;inset:0;z-index:15;background:#000;color:#fff}
+.rl_sc{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}.rl_sc::-webkit-scrollbar{display:none}
+.rl_sl{position:relative;height:100vh;height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.rl_bg{position:absolute;inset:-30px;background:center/cover;filter:blur(28px) brightness(.45)}
+.rl_w{position:relative;display:inline-block;line-height:0;z-index:1}.rl_im{display:block;max-width:100vw;max-height:100vh;max-height:100dvh;-webkit-user-drag:none;user-select:none}
+.rl_in{position:absolute;left:0;right:76px;bottom:0;padding:80px 16px calc(22px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,#000b);z-index:2}
+.rl_in p{margin:8px 0 0;font-size:14px;line-height:1.4;max-height:5.6em;overflow:auto}.rl_ur{display:flex;align-items:center;gap:10px;cursor:pointer}.rl_ur .av{width:38px;height:38px;border:2px solid #fff}.rl_mu{margin-top:8px;font-size:13px;opacity:.9}
+.rl_ac{position:absolute;right:12px;bottom:calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px;align-items:center;z-index:3}
+.rl_ac button{background:none;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:700;font-size:12px;filter:drop-shadow(0 2px 6px #0008)}
+.rl_ac svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linejoin:round;stroke-linecap:round}.rl_lk.on svg{fill:#ff4d6d;stroke:#ff4d6d;animation:pop .35s}
+.rl_n{font-size:12px;background:#0007;padding:4px 8px;border-radius:999px}
+.rl_x,.rl_s{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));z-index:5;width:42px;height:42px;border-radius:50%;border:0;background:#0007;color:#fff;font-size:18px;backdrop-filter:blur(6px)}.rl_x{left:14px}.rl_s{right:14px}
 </style></head><body>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
 <div class="tabs"><button class="btn" id="tl">Entrar</button><button class="btn s" id="tc">Cadastrar</button></div>
-<input id="nm" placeholder="Nome de usuário" class="hide"><select id="ty" class="hide"><option value="public">🌍 Conta pública (ganhar seguidores)</option><option value="personal">🔒 Conta pessoal (só amigos veem)</option></select>
+<input id="nm" placeholder="Apelido" class="hide" maxlength="30"><input id="hd" placeholder="@usuario (único)" class="hide" maxlength="21" autocapitalize="off" autocomplete="off"><select id="ty" class="hide"><option value="public">🌍 Conta pública (ganhar seguidores)</option><option value="personal">🔒 Conta pessoal (só amigos veem)</option></select>
 <input id="em" type="email" placeholder="E-mail"><input id="pw" type="password" placeholder="Senha (mín. 6)">
 <button class="btn" id="go" style="width:100%;margin-top:8px">Entrar</button><div class="or">ou</div><button class="btn s" id="gl" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continuar com Google</button>
 <p id="er" style="color:#e5484d;font-size:13px"></p>
@@ -170,16 +182,16 @@ const priv=()=>!!me&&me.type=='personal',
  pref=(id,p)=>p.priv?db.collection('users').doc(p.uid).collection('pposts').doc(id):db.collection('posts').doc(id);
 // auth
 $('#tl').onclick=()=>setMode(false);$('#tc').onclick=()=>setMode(true);
-function setMode(s){signup=s;$('#nm').classList.toggle('hide',!s);$('#ty').classList.toggle('hide',!s);$('#go').textContent=s?'Criar conta':'Entrar';$('#tl').className='btn'+(s?' s':'');$('#tc').className='btn'+(s?'':' s')}
+function setMode(s){signup=s;$('#nm').classList.toggle('hide',!s);$('#hd').classList.toggle('hide',!s);$('#ty').classList.toggle('hide',!s);$('#go').textContent=s?'Criar conta':'Entrar';$('#tl').className='btn'+(s?' s':'');$('#tc').className='btn'+(s?'':' s')}
 $('#go').onclick=async()=>{$('#er').textContent='';try{
- if(signup){const n=$('#nm').value.trim();if(n.length<3)throw Error('Nome muito curto');
+ if(signup){const n=$('#nm').value.trim(),h=normHandle($('#hd').value);if(n.length<2)throw Error('Apelido muito curto');const er=chkHandle(h);if(er)throw Error(er);
   const c=await auth.createUserWithEmailAndPassword($('#em').value,$('#pw').value);
-  if(!(await db.collection('users').where('name','==',n).limit(1).get()).empty){await c.user.delete();throw Error('Nome já em uso')}
-  await db.collection('users').doc(c.user.uid).set({name:n,photo:'',type:$('#ty').value,ts:TS()})}
+  if(!(await handleFree(h))){await c.user.delete();throw Error('Esse @ já está em uso')}
+  await db.collection('users').doc(c.user.uid).set({name:n,handle:h,photo:'',type:$('#ty').value,ts:TS()})}
  else await auth.signInWithEmailAndPassword($('#em').value,$('#pw').value)}catch(e){$('#er').textContent=e.message}};
 auth.onAuthStateChanged(async u=>{if(!u){me=null;$('#auth').classList.remove('hide');$('#app').classList.add('hide');return}
  let d=await db.collection('users').doc(u.uid).get();for(let i=0;i<5&&!d.exists&&!u.providerData.some(p=>p.providerId=='google.com');i++){await new Promise(r=>setTimeout(r,500));d=await db.collection('users').doc(u.uid).get()}
- if(!d.exists&&u.providerData.some(p=>p.providerId=='google.com')){await gsetup(u);d=await db.collection('users').doc(u.uid).get()}if(!d.exists)return;me={uid:u.uid,...d.data()};$('#auth').classList.add('hide');$('#app').classList.remove('hide');try{fol=new Set((await db.collection('follows').where('a','==',u.uid).get()).docs.map(d=>d.data().b))}catch(e){showErr(e,'carregar seguidores (regra follows)')}try{fri=new Set((await db.collection('friends').where('v','==',u.uid).get()).docs.map(d=>d.data().o))}catch(e){showErr(e,'carregar amigos (regra friends)')}if(me.type=='personal')mode='fri';rail();go('feed')});
+ if(!d.exists&&u.providerData.some(p=>p.providerId=='google.com')){await gsetup(u);d=await db.collection('users').doc(u.uid).get()}if(!d.exists)return;me={uid:u.uid,...d.data()};$('#auth').classList.add('hide');$('#app').classList.remove('hide');try{fol=new Set((await db.collection('follows').where('a','==',u.uid).get()).docs.map(d=>d.data().b))}catch(e){showErr(e,'carregar seguidores (regra follows)')}try{fri=new Set((await db.collection('friends').where('v','==',u.uid).get()).docs.map(d=>d.data().o))}catch(e){showErr(e,'carregar amigos (regra friends)')}if(me.type=='personal')mode='fri';rail();go('feed');if(!me.handle)setTimeout(askHandle,700)});
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
 function go(v){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==({aud:'studio',cfg:'me'}[v]||v)));if(unsub){unsub();unsub=null}({feed,exp,studio,aud,msg,me:prof,cfg:settings})[v]()}
 let unsub=null,obs=null;
@@ -237,14 +249,17 @@ async function carousel(files){
    for(let i=1;i<imgs.length;i++)await r.collection('imgs').doc(String(i).padStart(2,'0')).set({i,d:imgs[i]});m.remove();if(priv())mode='fri';go('feed')}
   catch(x){showErr(x);bt.disabled=false;bt.textContent='Publicar'}}}
 // EXPLORAR
-function userRow(id,u){const e=document.createElement('div');e.className='card ph';e.style.cursor='pointer';e.innerHTML=`<img class="av" src="${u.photo||ICON}"><div><b>${esc(u.name)}${u.type=='personal'?' 🔒':''}</b><div class="mt">${esc(u.bio||'')}</div></div>`;e.onclick=()=>viewProfile(id);return e}
-function grid(box,docs,add){if(!add)box.innerHTML='';docs.forEach(d=>{const i=document.createElement('img');i.src=d.data().img;i.loading='lazy';i.onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(d.id,d.data()))};box.append(i)});if(!docs.length&&!add)box.innerHTML='<p class="mt" style="grid-column:1/-1">Nada por aqui ainda.</p>'}
-async function exp(){$('#main').innerHTML=`<input id="q" placeholder="🔎 Buscar pessoas pelo nome"><div id="ur"></div><h3>Descobrir</h3><div class="grid" id="gr"></div><div id="gs" class="mt" style="text-align:center;padding:18px"></div>`;
- $('#q').oninput=async e=>{const v=e.target.value.trim(),b=$('#ur');b.innerHTML='';if(!v)return;const s=await db.collection('users').orderBy('name').startAt(v).endAt(v+'\uf8ff').limit(8).get();s.forEach(d=>b.append(userRow(d.id,d.data())));if(s.empty)b.innerHTML='<p class="mt">Ninguém encontrado.</p>'};
- let last=null,busy=false,done=false,first=true,cnt=0;const sn=$('#gs'),io=new IntersectionObserver(es=>{if(es[0].isIntersecting)more()},{rootMargin:'700px'});
+function userRow(id,u){const e=document.createElement('div');e.className='card ph';e.style.cursor='pointer';e.innerHTML=`<img class="av" src="${u.photo||ICON}"><div><b>${esc(u.name)}${u.type=='personal'?' 🔒':''}</b><div class="mt">${u.handle?'@'+esc(u.handle)+(u.bio?' · ':''):''}${esc(u.bio||'')}</div></div>`;e.onclick=()=>viewProfile(id);return e}
+function grid(box,docs,add){if(!add)box.innerHTML='';docs.forEach(d=>{const i=document.createElement('img');i.src=d.data().img;i.loading='lazy';i.onclick=()=>{if(box.id=='gr'&&RL.length){reels(RL,Math.max(0,RL.findIndex(x=>x.id==d.id)));return}const m=modal('');m.querySelector('.box').append(postEl(d.id,d.data()))};box.append(i)});if(!docs.length&&!add)box.innerHTML='<p class="mt" style="grid-column:1/-1">Nada por aqui ainda.</p>'}
+async function exp(){$('#main').innerHTML=`<input id="q" placeholder="🔎 Buscar por apelido ou @"><div id="ur"></div><div class="row" style="align-items:center"><h3 style="flex:1">Descobrir</h3><button class="btn s" id="tkb" style="flex:none">▶ Modo TikTok</button></div><div class="grid" id="gr"></div><div id="gs" class="mt" style="text-align:center;padding:18px"></div>`;
+ $('#q').oninput=async e=>{const raw=e.target.value.trim(),b=$('#ur');b.innerHTML='';if(!raw)return;const h=normHandle(raw),qs=[];
+  if(!raw.startsWith('@'))qs.push(db.collection('users').orderBy('name').startAt(raw).endAt(raw+'\uf8ff').limit(8).get());if(h)qs.push(db.collection('users').orderBy('handle').startAt(h).endAt(h+'\uf8ff').limit(8).get());
+  const seen=new Set();let n=0;(await Promise.all(qs)).forEach(r=>r.forEach(d=>{if(seen.has(d.id))return;seen.add(d.id);n++;b.append(userRow(d.id,d.data()))}));if(!n)b.innerHTML='<p class="mt">Ninguém encontrado.</p>'};
+ $('#tkb').onclick=()=>RL.length?reels(RL,0):toast('Carregando...');
+ let last=null,busy=false,done=false,first=true,cnt=0;RL=[];const sn=$('#gs'),io=new IntersectionObserver(es=>{if(es[0].isIntersecting)more()},{rootMargin:'700px'});
  async function more(){if(!$('#gr')){io.disconnect();return}if(busy||done)return;busy=true;sn.textContent='Carregando...';
   try{let q=db.collection('posts').orderBy('ts','desc');if(last)q=q.startAfter(last);const r=await q.limit(24).get();grid($('#gr'),r.docs,!first);first=false;
-   if(r.docs.length)last=r.docs[r.docs.length-1];cnt+=r.docs.length;
+   if(r.docs.length)last=r.docs[r.docs.length-1];cnt+=r.docs.length;RL.push(...r.docs);
    if(r.docs.length<24){done=true;io.disconnect();if(cnt<6)await lowState(sn);else sn.textContent='Você chegou ao fim ✨'}else{sn.textContent='';io.unobserve(sn);io.observe(sn)}}
   catch(e){sn.textContent='';showErr(e,'carregar')}busy=false}
  io.observe(sn)}
@@ -367,7 +382,7 @@ async function prof(uid){uid=typeof uid=='string'?uid:me.uid;
  const own=uid==me.uid,u=own?me:((await db.collection('users').doc(uid).get()).data()||{name:'Usuário'}),pv=u.type=='personal',can=!pv||own||fri.has(uid),E={docs:[],size:0};
  const [ps,fr,fg]=await Promise.all([!can?E:pv?db.collection('users').doc(uid).collection('pposts').get():db.collection('posts').where('uid','==',uid).get(),pv?E:db.collection('follows').where('b','==',uid).get(),pv?E:db.collection('follows').where('a','==',uid).get()]);
  const docs=ps.docs.sort((a,b)=>(b.data().ts?.toMillis?.()||9e15)-(a.data().ts?.toMillis?.()||9e15));let isF=fol.has(uid),nF=fr.size;
- $('#main').innerHTML=`<div class="card pf"><div class="bn" style="${u.banner?'background-image:url('+u.banner+')':''}"></div><img class="av big" id="pa" src="${u.photo||ICON}"><div><h2>${esc(u.name)}${pv?' 🔒':''}</h2><p class="mt" style="font-size:14px">${esc(u.bio||'Sem bio ainda.')}</p>${pv?'<p class="mt">Conta pessoal. Só amigos veem as publicações.</p>':`<p><b>${docs.length}</b> posts · <b id="nf" style="cursor:pointer">${nF}</b> seguidores · <b id="ng" style="cursor:pointer">${fg.size}</b> seguindo</p>`}<div class="row w" id="pb"></div></div></div>${can?'':'<div class="card" style="padding:22px;text-align:center">🔒 As publicações são visíveis só para amigos.</div>'}<div id="fx"></div><div class="grid" id="gr"></div>`;
+ $('#main').innerHTML=`<div class="card pf"><div class="bn" style="${u.banner?'background-image:url('+u.banner+')':''}"></div><img class="av big" id="pa" src="${u.photo||ICON}"><div><h2>${esc(u.name)}${pv?' 🔒':''}</h2>${u.handle?`<div class="mt" style="margin-top:-2px">@${esc(u.handle)}</div>`:''}<p class="mt" style="font-size:14px">${esc(u.bio||'Sem bio ainda.')}</p>${pv?'<p class="mt">Conta pessoal. Só amigos veem as publicações.</p>':`<p><b>${docs.length}</b> posts · <b id="nf" style="cursor:pointer">${nF}</b> seguidores · <b id="ng" style="cursor:pointer">${fg.size}</b> seguindo</p>`}<div class="row w" id="pb"></div></div></div>${can?'':'<div class="card" style="padding:22px;text-align:center">🔒 As publicações são visíveis só para amigos.</div>'}<div id="fx"></div><div class="grid" id="gr"></div>`;
  if(can)grid($('#gr'),docs);else $('#gr').remove();
  if(!pv){$('#nf').onclick=()=>listUsers('Seguidores',fr.docs.map(d=>d.data().a));$('#ng').onclick=()=>listUsers('Seguindo',fg.docs.map(d=>d.data().b))}
  const pb=$('#pb'),mk=(tx,fn,cls)=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=tx;b.onclick=async()=>{try{await fn()}catch(e){showErr(e,'perfil')}};pb.append(b);return b};
@@ -384,9 +399,10 @@ async function prof(uid){uid=typeof uid=='string'?uid:me.uid;
 const EM={'auth/wrong-password':'Senha atual incorreta','auth/invalid-credential':'Senha atual incorreta','auth/email-already-in-use':'Esse e-mail já está em uso','auth/invalid-email':'E-mail inválido','auth/weak-password':'A nova senha precisa ter pelo menos 6 caracteres','auth/too-many-requests':'Muitas tentativas. Tente mais tarde','auth/requires-recent-login':'Entre de novo na conta e tente outra vez'};
 const errMsg=e=>EM[e.code]||e.message;
 async function reauth(p){const u=auth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,p))}
-function settings(){const u=auth.currentUser;
+function settings(){const u=auth.currentUser,hasPw=u.providerData.some(p=>p.providerId=='password');
  $('#main').innerHTML=`<h2>Configurações</h2><p class="mt">Tipo da conta: ${priv()?'pessoal 🔒 (só amigos veem)':'pública 🌍'}</p>
  <div class="card" style="padding:16px"><h3>Perfil</h3><div class="row" style="justify-content:flex-start;margin-bottom:8px"><img class="av big" id="pa" src="${me.photo||ICON}" style="flex:none"><div class="row w"><button class="btn s" id="cf">Trocar foto</button>${mobile?'<button class="btn s" id="cc">📷 Câmera</button>':''}<button class="btn s" id="rf">Remover</button></div></div><label class="mt">Banner do perfil</label><div class="bn bp" id="bnp" style="${me.banner?'background-image:url('+me.banner+')':''}"></div><div class="row w" style="margin-bottom:10px"><button class="btn s" id="bnc">Trocar banner</button><button class="btn s" id="bnr">Remover</button></div><label class="mt">Bio</label><input id="bio" maxlength="150" placeholder="Fale sobre você" value="${esc(me.bio||'')}"><button class="btn" id="sb2">Salvar perfil</button></div>
+ <div class="card" style="padding:16px"><h3>Apelido e @</h3><label class="mt">Apelido (nome que aparece para os outros)</label><input id="nk" maxlength="30" value="${esc(me.name)}"><button class="btn s" id="nks">Salvar apelido</button><label class="mt" style="display:block;margin-top:14px">Seu @ (único, ninguém pode ter o mesmo)</label><input id="hd2" maxlength="21" placeholder="@usuario" value="${me.handle?'@'+esc(me.handle):''}" autocapitalize="off">${me.handle?(hasPw?'<input id="hp" type="password" placeholder="Senha atual (necessária para alterar o @)">':'<p class="mt">Você entrou com Google: vamos pedir para confirmar sua conta Google ao alterar.</p>'):''}<button class="btn" id="hds">${me.handle?'Alterar @':'Definir @'}</button></div>
  <div class="card" style="padding:16px"><h3>Aparência</h3><button class="btn s" id="tg">🌓 Alternar claro / escuro</button></div>
  <div class="card" style="padding:16px"><h3>E-mail</h3><p class="mt">Atual: ${esc(u.email)}</p><input id="ne" type="email" placeholder="Novo e-mail"><input id="pe" type="password" placeholder="Senha atual"><button class="btn" id="be">Alterar e-mail</button></div>
  <div class="card" style="padding:16px"><h3>Senha</h3><input id="p0" type="password" placeholder="Senha atual"><input id="p1" type="password" placeholder="Nova senha (mín. 6)"><input id="p2" type="password" placeholder="Repita a nova senha"><button class="btn" id="bp">Alterar senha</button></div>
@@ -395,6 +411,12 @@ function settings(){const u=auth.currentUser;
  $('#cf').onclick=async()=>set(await pick('image/*'));if(mobile)$('#cc').onclick=async()=>set(await pick('image/*',1));
  $('#rf').onclick=async()=>{me.photo='';await db.collection('users').doc(me.uid).update({photo:''});$('#pa').src=ICON;toast('Foto removida')};
  $('#sb2').onclick=async()=>{me.bio=$('#bio').value.trim().slice(0,150);await db.collection('users').doc(me.uid).update({bio:me.bio});toast('Perfil salvo')};
+ $('#nks').onclick=async()=>{const n=$('#nk').value.trim().slice(0,30);if(n.length<2)return toast('Apelido muito curto');try{await db.collection('users').doc(me.uid).update({name:n});me.name=n;rail();toast('Apelido salvo')}catch(e){showErr(e,'apelido')}};
+ $('#hds').onclick=async e=>{const b=e.target,h=normHandle($('#hd2').value),er=chkHandle(h);if(er)return toast(er);if(h==me.handle)return toast('Esse já é o seu @');b.disabled=true;
+  try{if(me.handle){if(hasPw){const pw=$('#hp').value;if(!pw)throw Error('Digite sua senha atual');await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,pw))}else await u.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider())}
+   if(!(await handleFree(h)))throw Error('Esse @ já está em uso');
+   await db.collection('users').doc(me.uid).update({handle:h});me.handle=h;$('#hd2').value='@'+h;if($('#hp'))$('#hp').value='';rail();toast('@ atualizado')}
+  catch(x){toast(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(x.code)?'Senha incorreta':x.code=='auth/too-many-requests'?'Muitas tentativas. Aguarde um pouco.':x.message)}b.disabled=false};
  const sbn=async v=>{await db.collection('users').doc(me.uid).update({banner:v});me.banner=v;$('#bnp').style.backgroundImage=v?'url('+v+')':'';toast(v?'Banner atualizado':'Banner removido')};
  $('#bnc').onclick=async()=>{const f=await pick('image/*');if(!f)return;try{await sbn(await bannerImg(f))}catch(e){showErr(e,'banner')}};
  $('#bnr').onclick=()=>sbn('').catch(e=>showErr(e,'banner'));
@@ -423,22 +445,22 @@ document.querySelectorAll('nav button').forEach(b=>b.querySelector('i').innerHTM
 function heart(){return '<svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z"/></svg>'}
 function burst(w){const h=document.createElement('div');h.className='bst';h.innerHTML=heart();w.append(h);setTimeout(()=>h.remove(),800)}
 async function rail(){const r=$('#rail');if(!r)return;
- r.innerHTML=`<div class="rm"><img class="av" src="${me.photo||ICON}"><div><b>${esc(me.name)}</b><div class="mt">${priv()?'Conta pessoal 🔒':'Conta pública'}</div></div></div><h4>Sugestões para você</h4><div id="sg"><p class="mt">Carregando...</p></div><p class="mt ft">© 2026 Vizzy</p>`;
+ r.innerHTML=`<div class="rm"><img class="av" src="${me.photo||ICON}"><div><b>${esc(me.name)}</b><div class="mt">${me.handle?'@'+esc(me.handle):(priv()?'Conta pessoal 🔒':'Conta pública')}</div></div></div><h4>Sugestões para você</h4><div id="sg"><p class="mt">Carregando...</p></div><p class="mt ft">© 2026 Vizzy</p>`;
  r.querySelector('.rm').onclick=()=>go('me');
  try{const s=await db.collection('users').limit(30).get(),L=s.docs.filter(d=>d.id!=me.uid&&d.data().type!='personal'&&!fol.has(d.id)).slice(0,5),b=$('#sg');if(!b)return;
   b.innerHTML=L.length?'':'<p class="mt">Você já segue todo mundo por aqui.</p>';
   L.forEach(d=>{const u=d.data(),e=document.createElement('div');e.className='sgr';
-   e.innerHTML=`<img class="av" src="${u.photo||ICON}"><div><b>${esc(u.name)}</b><div class="mt">${esc(u.bio||'Novo no Vizzy')}</div></div><button class="lnk">Seguir</button>`;
+   e.innerHTML=`<img class="av" src="${u.photo||ICON}"><div><b>${esc(u.name)}</b><div class="mt">${u.handle?'@'+esc(u.handle):esc(u.bio||'Novo no Vizzy')}</div></div><button class="lnk">Seguir</button>`;
    e.querySelector('.av').onclick=e.querySelector('b').onclick=()=>viewProfile(d.id);
    e.querySelector('button').onclick=async ev=>{const t=ev.target;try{await db.collection('follows').doc(me.uid+'_'+d.id).set({a:me.uid,b:d.id,ts:TS()});fol.add(d.id);t.textContent='Seguindo ✓';t.disabled=true}catch(x){showErr(x,'seguir')}};b.append(e)})}
  catch(e){const b=$('#sg');if(b)b.innerHTML=''}}
 async function onboard(){const b=$('#ob');if(!b)return;try{if(localStorage.vob)return}catch(e){}
  let hp=0;try{hp=(await tgt('posts').where('uid','==',me.uid).limit(1).get()).size}catch(e){}
  const T=[['Adicione uma foto de perfil',!!me.photo,'cfg'],['Escreva sua bio',!!me.bio,'cfg'],['Faça sua primeira publicação',hp>0,'studio'],['Siga 3 pessoas ou faça um amigo',fol.size>=3||fri.size>0,'exp']],n=T.filter(t=>t[1]).length;
- if(n==T.length||!$('#ob'))return;
+ if(n==T.length||!b.isConnected)return;
  b.innerHTML=`<div class="card ob"><div class="obh"><div><h3>Bem-vindo ao Vizzy</h3><p class="mt">Complete seu perfil: ${n} de ${T.length}</p></div><button class="ib" id="obx" title="Dispensar">✕</button></div><div class="pbar"><i style="width:${n/T.length*100}%"></i></div>${T.map(t=>`<button class="obi ${t[1]?'ok':''}" data-g="${t[2]}"><span class="ck">${t[1]?'✓':''}</span>${t[0]}</button>`).join('')}</div>`;
  b.querySelectorAll('.obi').forEach(x=>x.onclick=()=>go(x.dataset.g));
- $('#obx').onclick=()=>{try{localStorage.vob=1}catch(e){}b.innerHTML=''}}
+ b.querySelector('#obx').onclick=()=>{try{localStorage.vob=1}catch(e){}b.innerHTML=''}}
 
 $('#gl').onclick=async()=>{$('#er').textContent='';const pr=new firebase.auth.GoogleAuthProvider();
  try{await auth.signInWithPopup(pr)}catch(e){
@@ -446,14 +468,14 @@ $('#gl').onclick=async()=>{$('#er').textContent='';const pr=new firebase.auth.Go
   const M={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase (Authentication > Configurações > Domínios autorizados).','auth/operation-not-allowed':'O login com Google não está ativado no Firebase.','auth/account-exists-with-different-credential':'Já existe uma conta com esse e-mail. Entre com e-mail e senha.','auth/network-request-failed':'Sem conexão. Tente novamente.'};
   if(e.code!='auth/popup-closed-by-user'&&e.code!='auth/cancelled-popup-request')$('#er').textContent=M[e.code]||e.message}};
 function gsetup(u){return new Promise(res=>{
- const base=(u.displayName||u.email.split('@')[0]).replace(/\s+/g,'').slice(0,20),
- m=modal(`<h3>Quase lá!</h3><p class="mt">Escolha como você aparece no Vizzy.</p><input id="gn" maxlength="20" placeholder="Nome de usuário" value="${esc(base)}"><select id="gt"><option value="public">🌍 Conta pública (ganhar seguidores)</option><option value="personal">🔒 Conta pessoal (só amigos veem)</option></select><p id="ge" style="color:#e5484d;font-size:13px"></p><div class="row"><button class="btn s" id="gc">Cancelar</button><button class="btn" id="gk">Continuar</button></div>`);
+ const nick=(u.displayName||u.email.split('@')[0]).slice(0,30),hb=normHandle(u.email.split('@')[0]).replace(/[^a-z0-9._]/g,'').slice(0,20),
+ m=modal(`<h3>Quase lá!</h3><p class="mt">Escolha como você aparece no Vizzy.</p><input id="gn" maxlength="30" placeholder="Apelido" value="${esc(nick)}"><input id="gh" maxlength="21" placeholder="@usuario (único)" value="@${esc(hb)}" autocapitalize="off"><select id="gt"><option value="public">🌍 Conta pública (ganhar seguidores)</option><option value="personal">🔒 Conta pessoal (só amigos veem)</option></select><p id="ge" style="color:#e5484d;font-size:13px"></p><div class="row"><button class="btn s" id="gc">Cancelar</button><button class="btn" id="gk">Continuar</button></div>`);
  m.onclick=null;
  m.querySelector('#gc').onclick=()=>{m.remove();auth.signOut();res()};
- m.querySelector('#gk').onclick=async e=>{const b=e.target,n=m.querySelector('#gn').value.trim(),er=m.querySelector('#ge');er.textContent='';
-  if(n.length<3)return er.textContent='Nome muito curto';b.disabled=true;
-  try{if(!(await db.collection('users').where('name','==',n).limit(1).get()).empty){er.textContent='Nome já em uso';b.disabled=false;return}
-   await db.collection('users').doc(u.uid).set({name:n,photo:'',type:m.querySelector('#gt').value,ts:TS()});m.remove();res()}
+ m.querySelector('#gk').onclick=async e=>{const b=e.target,n=m.querySelector('#gn').value.trim(),h=normHandle(m.querySelector('#gh').value),er=m.querySelector('#ge');er.textContent='';
+  if(n.length<2)return er.textContent='Apelido muito curto';const ce=chkHandle(h);if(ce)return er.textContent=ce;b.disabled=true;
+  try{if(!(await handleFree(h))){er.textContent='Esse @ já está em uso';b.disabled=false;return}
+   await db.collection('users').doc(u.uid).set({name:n,handle:h,photo:'',type:m.querySelector('#gt').value,ts:TS()});m.remove();res()}
   catch(x){er.textContent=x.message;b.disabled=false}}})}
 
 async function bannerImg(f){const i=await loadImg(await readURL(f));let q=.85,w=1200,o;for(let n=0;n<8;n++){const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(w/3);const x=c.getContext('2d'),k=Math.max(c.width/i.width,c.height/i.height),dw=i.width*k,dh=i.height*k;x.drawImage(i,(c.width-dw)/2,(c.height-dh)/2,dw,dh);o=c.toDataURL('image/jpeg',q);if(o.length<200e3)break;w*=.85;q=Math.max(.5,q-.06)}return o}
@@ -462,4 +484,37 @@ async function lowState(sn){sn.innerHTML='<div class="card" style="padding:18px;
  sn.querySelector('#gp').onclick=()=>go('studio');
  try{const u=await db.collection('users').limit(30).get(),L=u.docs.filter(d=>d.id!=me.uid&&!fol.has(d.id)&&d.data().type!='personal').slice(0,5);
   if(L.length){const h=document.createElement('h3');h.textContent='Pessoas para conhecer';h.style.textAlign='left';sn.append(h);L.forEach(d=>sn.append(userRow(d.id,d.data())))}}catch(e){}}
+
+let RL=[];
+function reels(docs,start){if(!docs.length)return toast('Nada para mostrar ainda');if(window.cur){cur.pause();cur=null}
+ const o=document.createElement('div');o.className='rl_o';o.innerHTML='<button class="rl_x" title="Fechar">✕</button><button class="rl_s" title="Som">🔊</button><div class="rl_sc"></div>';
+ document.body.append(o);document.body.style.overflow='hidden';
+ const sc=o.querySelector('.rl_sc'),au=new Audio();au.loop=true;let muted=false,lastDoc=docs[docs.length-1],busy=false,end=false,curEl=null;
+ const CM='<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+ close=()=>{au.pause();io.disconnect();o.remove();document.body.style.overflow='';document.removeEventListener('keydown',kd)},
+ kd=e=>{if(e.key=='Escape'&&!document.querySelector('.modal'))close()},
+ io=new IntersectionObserver(es=>es.forEach(async en=>{if(!en.isIntersecting)return;const el=en.target,p=el._p;curEl=el;au.pause();
+  if(el._i>=sc.children.length-3)more();
+  if(p.audio){try{const src=await audSrc(p.audio);if(curEl!=el||!src)return;au.src=src;au.muted=muted;await au.play()}catch(x){}}}),{root:sc,threshold:.7}),
+ add=ds=>ds.forEach(d=>{const p=d.data(),id=d.id,el=document.createElement('section');el.className='rl_sl';el._p=p;el._i=sc.children.length;let L=p.likes||[];
+  el.innerHTML=`<div class="rl_bg" style="background-image:url(${p.img})"></div><div class="rl_w"><img class="rl_im" src="${p.img}">${gifHTML(p.gifs)}</div><div class="rl_in"><div class="rl_ur"><img class="av" src="${p.avatar||ICON}"><b>${esc(p.name)}</b></div>${p.cap?`<p>${esc(p.cap)}</p>`:''}${p.audio?'<div class="rl_mu">🎵 com áudio</div>':''}</div><div class="rl_ac"><button class="rl_lk"></button><button class="rl_cm">${CM}<span>Comentar</span></button>${p.n>1?`<span class="rl_n">📷 ${p.n}</span>`:''}</div>`;
+  const lk=el.querySelector('.rl_lk'),r=()=>{lk.classList.toggle('on',L.includes(me.uid));lk.innerHTML=heart()+'<span>'+L.length+'</span>'};r();
+  lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];r();try{await pref(id,p).update({likes:firebase.firestore.FieldValue[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir')}};
+  el.querySelector('.rl_w').ondblclick=()=>{burst(el.querySelector('.rl_w'));if(!L.includes(me.uid))lk.click()};
+  el.querySelector('.rl_cm').onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(id,p))};
+  el.querySelector('.rl_ur').onclick=()=>{close();viewProfile(p.uid)};
+  sc.append(el);io.observe(el)}),
+ more=async()=>{if(busy||end)return;busy=true;try{const q=await db.collection('posts').orderBy('ts','desc').startAfter(lastDoc).limit(12).get();if(q.size<12)end=true;if(q.size){lastDoc=q.docs[q.size-1];add(q.docs)}}catch(e){showErr(e,'carregar')}busy=false};
+ o.querySelector('.rl_x').onclick=close;document.addEventListener('keydown',kd);
+ o.querySelector('.rl_s').onclick=e=>{muted=!muted;au.muted=muted;e.target.textContent=muted?'🔇':'🔊'};
+ add(docs);requestAnimationFrame(()=>{sc.scrollTop=start*sc.clientHeight})}
+
+const normHandle=v=>(v||'').trim().replace(/^@+/,'').toLowerCase();
+const chkHandle=h=>!/^[a-z0-9._]{3,20}$/.test(h)?'O @ deve ter de 3 a 20 caracteres: letras minúsculas, números, ponto ou _':/^\.|\.$|\.\./.test(h)?'O @ não pode começar ou terminar com ponto, nem ter dois pontos seguidos':'';
+async function handleFree(h){const s=await db.collection('users').where('handle','==',h).limit(2).get();return s.docs.every(d=>d.id==(me&&me.uid))}
+function askHandle(){if(!me||me.handle)return;const sg=(me.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9._]/g,'').slice(0,20),
+ m=modal(`<h3>Escolha seu @</h3><p class="mt">Agora cada pessoa no Vizzy tem um @ único. Seu apelido continua o mesmo.</p><input id="ah" maxlength="21" placeholder="@usuario" value="@${esc(sg)}" autocapitalize="off"><p id="ae" style="color:#e5484d;font-size:13px"></p><div class="row"><button class="btn s" id="ax">Depois</button><button class="btn" id="ak">Salvar @</button></div>`);
+ m.querySelector('#ax').onclick=()=>m.remove();
+ m.querySelector('#ak').onclick=async e=>{const b=e.target,h=normHandle(m.querySelector('#ah').value),er=m.querySelector('#ae'),ce=chkHandle(h);er.textContent='';if(ce)return er.textContent=ce;b.disabled=true;
+  try{if(!(await handleFree(h))){er.textContent='Esse @ já está em uso';b.disabled=false;return}await db.collection('users').doc(me.uid).update({handle:h});me.handle=h;m.remove();rail();toast('@'+h+' definido')}catch(x){er.textContent=x.message;b.disabled=false}}}
 </script></body></html>
