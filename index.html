@@ -241,11 +241,11 @@ function userRow(id,u){const e=document.createElement('div');e.className='card p
 function grid(box,docs,add){if(!add)box.innerHTML='';docs.forEach(d=>{const i=document.createElement('img');i.src=d.data().img;i.loading='lazy';i.onclick=()=>{const m=modal('');m.querySelector('.box').append(postEl(d.id,d.data()))};box.append(i)});if(!docs.length&&!add)box.innerHTML='<p class="mt" style="grid-column:1/-1">Nada por aqui ainda.</p>'}
 async function exp(){$('#main').innerHTML=`<input id="q" placeholder="🔎 Buscar pessoas pelo nome"><div id="ur"></div><h3>Descobrir</h3><div class="grid" id="gr"></div><div id="gs" class="mt" style="text-align:center;padding:18px"></div>`;
  $('#q').oninput=async e=>{const v=e.target.value.trim(),b=$('#ur');b.innerHTML='';if(!v)return;const s=await db.collection('users').orderBy('name').startAt(v).endAt(v+'\uf8ff').limit(8).get();s.forEach(d=>b.append(userRow(d.id,d.data())));if(s.empty)b.innerHTML='<p class="mt">Ninguém encontrado.</p>'};
- let last=null,busy=false,done=false,first=true;const sn=$('#gs'),io=new IntersectionObserver(es=>{if(es[0].isIntersecting)more()},{rootMargin:'700px'});
+ let last=null,busy=false,done=false,first=true,cnt=0;const sn=$('#gs'),io=new IntersectionObserver(es=>{if(es[0].isIntersecting)more()},{rootMargin:'700px'});
  async function more(){if(!$('#gr')){io.disconnect();return}if(busy||done)return;busy=true;sn.textContent='Carregando...';
   try{let q=db.collection('posts').orderBy('ts','desc');if(last)q=q.startAfter(last);const r=await q.limit(24).get();grid($('#gr'),r.docs,!first);first=false;
-   if(r.docs.length)last=r.docs[r.docs.length-1];
-   if(r.docs.length<24){done=true;io.disconnect();sn.textContent=last?'Você chegou ao fim ✨':''}else{sn.textContent='';io.unobserve(sn);io.observe(sn)}}
+   if(r.docs.length)last=r.docs[r.docs.length-1];cnt+=r.docs.length;
+   if(r.docs.length<24){done=true;io.disconnect();if(cnt<6)await lowState(sn);else sn.textContent='Você chegou ao fim ✨'}else{sn.textContent='';io.unobserve(sn);io.observe(sn)}}
   catch(e){sn.textContent='';showErr(e,'carregar')}busy=false}
  io.observe(sn)}
 // STORIES
@@ -457,4 +457,9 @@ function gsetup(u){return new Promise(res=>{
   catch(x){er.textContent=x.message;b.disabled=false}}})}
 
 async function bannerImg(f){const i=await loadImg(await readURL(f));let q=.85,w=1200,o;for(let n=0;n<8;n++){const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(w/3);const x=c.getContext('2d'),k=Math.max(c.width/i.width,c.height/i.height),dw=i.width*k,dh=i.height*k;x.drawImage(i,(c.width-dw)/2,(c.height-dh)/2,dw,dh);o=c.toDataURL('image/jpeg',q);if(o.length<200e3)break;w*=.85;q=Math.max(.5,q-.06)}return o}
+
+async function lowState(sn){sn.innerHTML='<div class="card" style="padding:18px;text-align:center"><b>O Explorar ainda está vazio</b><p class="mt">Só aparecem aqui posts públicos. Publique algo ou siga mais gente para ele ganhar vida.</p><button class="btn" id="gp">Publicar no Studio</button></div>';
+ sn.querySelector('#gp').onclick=()=>go('studio');
+ try{const u=await db.collection('users').limit(30).get(),L=u.docs.filter(d=>d.id!=me.uid&&!fol.has(d.id)&&d.data().type!='personal').slice(0,5);
+  if(L.length){const h=document.createElement('h3');h.textContent='Pessoas para conhecer';h.style.textAlign='left';sn.append(h);L.forEach(d=>sn.append(userRow(d.id,d.data())))}}catch(e){}}
 </script></body></html>
