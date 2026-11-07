@@ -134,6 +134,7 @@ nav button{position:relative;transition:.15s}nav button svg{display:block}nav bu
 .ob{animation:fi .45s ease both}@keyframes fi{from{opacity:0;transform:translateY(-6px)}}
 body.boot #auth,body.boot #app{display:none!important}
 #splash img{height:56px}.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--bd);border-top-color:var(--ac);animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.chat>*{min-width:0}.msgs,.inp{min-width:0}.inp input{min-width:0;flex:1}.m{min-width:0;overflow-wrap:anywhere;word-break:break-word}.ci{overflow-wrap:anywhere}
 </style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -433,13 +434,16 @@ let cu=null;
 function msg(){$('#main').innerHTML=`<div class="row w" style="margin-bottom:10px"><button class="btn s" id="n1">+ DM</button><button class="btn s" id="n2">+ Grupo</button><button class="btn s" id="n3">+ Comunidade</button><button class="btn s" id="n4">Explorar</button></div><div class="chat"><div class="cl" id="cl"></div><div id="cv2" class="hide"></div></div>`;
  const byName=async n=>{const s=await db.collection('users').where('name','==',n.trim()).limit(1).get();return s.empty?null:s.docs[0].id};
  $('#n1').onclick=async()=>{const n=prompt('Nome do usuário:');if(!n)return;const u=await byName(n);if(!u)return toast('Usuário não encontrado');const id=[me.uid,u].sort().join('_');await db.collection('chats').doc(id).set({type:'dm',members:[me.uid,u],names:{[me.uid]:me.name,[u]:n.trim()},ts:TS()},{merge:true})};
- $('#n2').onclick=async()=>{const t=prompt('Nome do grupo:');if(!t)return;const l=(prompt('Usuários (separados por vírgula):')||'').split(',').filter(x=>x.trim()),mem=[me.uid];for(const n of l){const u=await byName(n);u?mem.push(u):toast(n+' não encontrado')}await db.collection('chats').add({type:'group',name:t,members:mem,ts:TS()})};
- $('#n3').onclick=async()=>{const t=prompt('Nome da comunidade:');t&&await db.collection('chats').add({type:'community',name:t,members:[me.uid],ts:TS()})};
+ $('#n2').onclick=async()=>{const t=prompt('Nome do grupo:');if(!t)return;const l=(prompt('Usuários (separados por vírgula):')||'').split(',').filter(x=>x.trim()),mem=[me.uid];for(const n of l){const u=await byName(n);u?mem.push(u):toast(n+' não encontrado')}await db.collection('chats').add({type:'group',name:t,members:mem,owner:me.uid,ts:TS()})};
+ $('#n3').onclick=async()=>{const t=prompt('Nome da comunidade:');t&&await db.collection('chats').add({type:'community',name:t,members:[me.uid],owner:me.uid,ts:TS()})};
  $('#n4').onclick=async()=>{const s=await db.collection('chats').where('type','==','community').limit(30).get(),m=modal('<h3>Comunidades</h3><div id="ex"></div>');s.forEach(d=>{const x=d.data(),j=x.members.includes(me.uid),e=document.createElement('div');e.className='ph';e.innerHTML=`<b style="flex:1">${esc(x.name)} <small>(${x.members.length})</small></b>`+(j?'<small>Membro</small>':'<button class="btn">Entrar</button>');const b=e.querySelector('button');if(b)b.onclick=async()=>{await d.ref.update({members:firebase.firestore.FieldValue.arrayUnion(me.uid)});b.remove()};m.querySelector('#ex').append(e)})};
  unsub=db.collection('chats').where('members','array-contains',me.uid).onSnapshot(s=>{const l=$('#cl');if(!l)return;l.innerHTML=s.empty?'<p class="mt">Nenhuma conversa ainda. Use + DM, + Grupo ou Explorar para entrar numa comunidade.</p>':'';s.forEach(d=>{const x=d.data(),nm=x.type=='dm'?Object.entries(x.names||{}).find(([k])=>k!=me.uid)?.[1]||'DM':x.name,e=document.createElement('div');e.className='ci'+(cu==d.id?' on':'');e.textContent=({dm:'💬 ',group:'👥 ',community:'🌐 '})[x.type]+nm;e.onclick=()=>openChat(d.id,nm);l.append(e)})},showErr)}
 let mu=null;
-function openChat(id,nm){cu=id;if(mu)mu();$('#cl').classList.add('hide');$('#cv2').classList.remove('hide');$('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start"><button class="btn s" id="bk" style="flex:none">←</button><b>${esc(nm)}</b></div><div class="msgs" id="ms"></div><div class="row inp"><input id="mi" placeholder="Mensagem" autocomplete="off" enterkeyhint="send"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
+function openChat(id,nm){cu=id;if(mu)mu();$('#cl').classList.add('hide');$('#cv2').classList.remove('hide');$('#cv2').innerHTML=`<div class="row" style="justify-content:flex-start"><button class="btn s" id="bk" style="flex:none">←</button><b style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(nm)}</b></div><div class="msgs" id="ms"></div><div class="row inp"><input id="mi" maxlength="1000" placeholder="Mensagem" autocomplete="off" enterkeyhint="send"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
  $('#bk').onclick=()=>{cu=null;if(mu){mu();mu=null}$('#cv2').classList.add('hide');$('#cl').classList.remove('hide')};const send=async()=>{const t=$('#mi').value.trim();if(!t)return;$('#mi').value='';await db.collection('chats').doc(id).collection('msgs').add({uid:me.uid,name:me.name,t,ts:TS()})};$('#sd').onclick=send;$('#mi').onkeydown=e=>{if(e.key=='Enter')send()};
+ db.collection('chats').doc(id).get().then(c=>{const x=c.data();if(!x||x.type=='dm'||!$('#cv2'))return;const hd=$('#cv2').querySelector('.row'),own=x.owner==me.uid||(!x.owner&&(x.type=='group'||x.members.length<=1)),lv=document.createElement('button');
+  lv.className='btn s';lv.style.flex='none';lv.textContent='Sair';lv.onclick=async()=>{if(!confirm('Sair de "'+x.name+'"?'))return;try{await c.ref.update({members:firebase.firestore.FieldValue.arrayRemove(me.uid)});const b=$('#bk');b&&b.click()}catch(e){showErr(e,'sair')}};hd.append(lv);
+  if(own){const dl=document.createElement('button');dl.className='btn s';dl.style.cssText='flex:none;color:#e5484d';dl.textContent='Apagar';dl.onclick=()=>delChat(c.ref,x);hd.append(dl)}}).catch(()=>{});
  mu=db.collection('chats').doc(id).collection('msgs').orderBy('ts','desc').limit(100).onSnapshot(s=>{const b=$('#ms');if(!b)return;b.innerHTML='';s.docs.reverse().forEach(d=>{const x=d.data(),e=document.createElement('div');e.className='m'+(x.uid==me.uid?' me':'');e.innerHTML=`<small>${esc(x.name)}</small>${esc(x.t)}`;b.append(e)});window.scrollTo(0,document.body.scrollHeight)},showErr)}
 setMode(false);document.querySelectorAll('.lob').forEach(b=>b.onclick=()=>auth.signOut());
 
@@ -524,4 +528,8 @@ function askHandle(){if(!me||me.handle)return;const sg=(me.name||'').toLowerCase
 
 function bootDone(){const e=document.getElementById('splash');document.body.classList.remove('boot');if(e){e.classList.add('out');setTimeout(()=>e.remove(),600)}}
 setTimeout(bootDone,8000);$('#lgB').src=$('#lgA').src;
+
+async function delChat(ref,x){if(!confirm('Apagar "'+x.name+'" para todos? As mensagens serão perdidas e isso não pode ser desfeito.'))return;
+ try{if(mu){mu();mu=null}toast('Apagando...');let n;do{const q=await ref.collection('msgs').limit(400).get();n=q.size;if(n){const b=db.batch();q.docs.forEach(d=>b.delete(d.ref));await b.commit()}}while(n==400);
+  await ref.delete();cu=null;const v=$('#cv2'),l=$('#cl');if(v)v.classList.add('hide');if(l)l.classList.remove('hide');toast('Apagado')}catch(e){showErr(e,'apagar')}}
 </script></body></html>
