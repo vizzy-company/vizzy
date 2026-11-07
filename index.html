@@ -130,7 +130,11 @@ nav button{position:relative;transition:.15s}nav button svg{display:block}nav bu
 .rl_ac svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linejoin:round;stroke-linecap:round}.rl_lk.on svg{fill:#ff4d6d;stroke:#ff4d6d;animation:pop .35s}
 .rl_n{font-size:12px;background:#0007;padding:4px 8px;border-radius:999px}
 .rl_x,.rl_s{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));z-index:5;width:42px;height:42px;border-radius:50%;border:0;background:#0007;color:#fff;font-size:18px;backdrop-filter:blur(6px)}.rl_x{left:14px}.rl_s{right:14px}
-</style></head><body>
+#splash{display:none}
+body.boot #splash{display:flex;position:fixed;inset:0;z-index:99;align-items:center;justify-content:center;flex-direction:column;gap:22px;background:var(--bg)}
+body.boot #auth,body.boot #app{display:none!important}
+#splash img{height:56px}.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--bd);border-top-color:var(--ac);animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+</style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
 <div class="tabs"><button class="btn" id="tl">Entrar</button><button class="btn s" id="tc">Cadastrar</button></div>
@@ -189,9 +193,9 @@ $('#go').onclick=async()=>{$('#er').textContent='';try{
   if(!(await handleFree(h))){await c.user.delete();throw Error('Esse @ já está em uso')}
   await db.collection('users').doc(c.user.uid).set({name:n,handle:h,photo:'',type:$('#ty').value,ts:TS()})}
  else await auth.signInWithEmailAndPassword($('#em').value,$('#pw').value)}catch(e){$('#er').textContent=e.message}};
-auth.onAuthStateChanged(async u=>{if(!u){me=null;$('#auth').classList.remove('hide');$('#app').classList.add('hide');return}
+auth.onAuthStateChanged(async u=>{if(!u){me=null;$('#auth').classList.remove('hide');$('#app').classList.add('hide');document.body.classList.remove('boot');return}
  let d=await db.collection('users').doc(u.uid).get();for(let i=0;i<5&&!d.exists&&!u.providerData.some(p=>p.providerId=='google.com');i++){await new Promise(r=>setTimeout(r,500));d=await db.collection('users').doc(u.uid).get()}
- if(!d.exists&&u.providerData.some(p=>p.providerId=='google.com')){await gsetup(u);d=await db.collection('users').doc(u.uid).get()}if(!d.exists)return;me={uid:u.uid,...d.data()};$('#auth').classList.add('hide');$('#app').classList.remove('hide');try{fol=new Set((await db.collection('follows').where('a','==',u.uid).get()).docs.map(d=>d.data().b))}catch(e){showErr(e,'carregar seguidores (regra follows)')}try{fri=new Set((await db.collection('friends').where('v','==',u.uid).get()).docs.map(d=>d.data().o))}catch(e){showErr(e,'carregar amigos (regra friends)')}if(me.type=='personal')mode='fri';rail();go('feed');if(!me.handle)setTimeout(askHandle,700)});
+ if(!d.exists&&u.providerData.some(p=>p.providerId=='google.com')){await gsetup(u);d=await db.collection('users').doc(u.uid).get()}if(!d.exists){document.body.classList.remove('boot');return}me={uid:u.uid,...d.data()};$('#auth').classList.add('hide');$('#app').classList.remove('hide');await Promise.all([db.collection('follows').where('a','==',u.uid).get().then(r=>{fol=new Set(r.docs.map(d=>d.data().b))}).catch(e=>showErr(e,'carregar seguidores (regra follows)')),db.collection('friends').where('v','==',u.uid).get().then(r=>{fri=new Set(r.docs.map(d=>d.data().o))}).catch(e=>showErr(e,'carregar amigos (regra friends)'))]);if(me.type=='personal')mode='fri';rail();go('feed');document.body.classList.remove('boot');if(!me.handle)setTimeout(askHandle,700)});
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
 function go(v){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==({aud:'studio',cfg:'me'}[v]||v)));if(unsub){unsub();unsub=null}({feed,exp,studio,aud,msg,me:prof,cfg:settings})[v]()}
 let unsub=null,obs=null;
@@ -517,4 +521,6 @@ function askHandle(){if(!me||me.handle)return;const sg=(me.name||'').toLowerCase
  m.querySelector('#ax').onclick=()=>m.remove();
  m.querySelector('#ak').onclick=async e=>{const b=e.target,h=normHandle(m.querySelector('#ah').value),er=m.querySelector('#ae'),ce=chkHandle(h);er.textContent='';if(ce)return er.textContent=ce;b.disabled=true;
   try{if(!(await handleFree(h))){er.textContent='Esse @ já está em uso';b.disabled=false;return}await db.collection('users').doc(me.uid).update({handle:h});me.handle=h;m.remove();rail();toast('@'+h+' definido')}catch(x){er.textContent=x.message;b.disabled=false}}}
+
+setTimeout(()=>document.body.classList.remove('boot'),8000);$('#lgB').src=$('#lgA').src;
 </script></body></html>
