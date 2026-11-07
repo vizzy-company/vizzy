@@ -147,6 +147,7 @@ body.boot #auth,body.boot #app{display:none!important}
 .rl_sp{background:var(--sf);color:var(--tx);border-radius:20px 20px 0 0;max-height:75vh;display:flex;flex-direction:column;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:up2 .25s ease-out}
 .rl_sp .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.rl_sp .cs{padding:0;display:flex;flex-direction:column;min-height:0;flex:1}.rl_sp .cl2{overflow:auto;min-height:140px;max-height:50vh}
 @keyframes up2{from{transform:translateY(100%)}}
+.cm_a{display:flex;gap:14px;flex-wrap:wrap}
 </style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -236,7 +237,7 @@ function postEl(id,p){const e=document.createElement('article');e.className='car
  const lk=e.querySelector('.lk'),r=()=>{const o=L.includes(me.uid);lk.classList.toggle('on',o);lk.innerHTML=heart(o)+'<span>'+L.length+'</span>'};r();
  lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];r();try{await R.update({likes:firebase.firestore.FieldValue[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir')}};
  e.querySelector('.mwh').ondblclick=()=>{burst(e.querySelector('.mwh'));if(!L.includes(me.uid))lk.click()};
- const cs=e.querySelector('.cs'),CU=commentsUI(R,cs);let ld=0;
+ const cs=e.querySelector('.cs'),CU=commentsUI(R,cs,{owner:p.uid});let ld=0;
  e.querySelector('.cm').onclick=()=>{cs.classList.toggle('hide');if(!ld){ld=1;CU.load().catch(showErr)}};
  if(p.audio)e.querySelector('.au').onclick=ev=>playAudio(p.audio,ev.target);
  if(p.n>1)R.collection('imgs').orderBy('i').get().then(s=>{const w=e.querySelector('.mwh');w.innerHTML='';w.append(carEl([p.img,...s.docs.map(d=>d.data().d)]))}).catch(showErr);
@@ -523,7 +524,7 @@ function reels(docs,start){if(!docs.length)return toast('Nada para mostrar ainda
   const lk=el.querySelector('.rl_lk'),r=()=>{lk.classList.toggle('on',L.includes(me.uid));lk.innerHTML=heart()+'<span>'+L.length+'</span>'};r();
   lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];r();try{await pref(id,p).update({likes:firebase.firestore.FieldValue[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir')}};
   el.querySelector('.rl_w').ondblclick=()=>{burst(el.querySelector('.rl_w'));if(!L.includes(me.uid))lk.click()};
-  el.querySelector('.rl_cm').onclick=()=>{const sh=document.createElement('div');sh.className='rl_sh';sh.innerHTML='<div class="rl_sp"><div class="hd"><b>Comentários</b><button class="ib" id="sx">✕</button></div><div class="cs"></div></div>';o.append(sh);sh.onclick=ev=>{if(ev.target==sh)sh.remove()};sh.querySelector('#sx').onclick=()=>sh.remove();commentsUI(pref(id,p),sh.querySelector('.cs'),{prof:u=>{close();viewProfile(u)}}).load().catch(showErr)};
+  el.querySelector('.rl_cm').onclick=()=>{const sh=document.createElement('div');sh.className='rl_sh';sh.innerHTML='<div class="rl_sp"><div class="hd"><b>Comentários</b><button class="ib" id="sx">✕</button></div><div class="cs"></div></div>';o.append(sh);sh.onclick=ev=>{if(ev.target==sh)sh.remove()};sh.querySelector('#sx').onclick=()=>sh.remove();commentsUI(pref(id,p),sh.querySelector('.cs'),{owner:p.uid,prof:u=>{close();viewProfile(u)}}).load().catch(showErr)};
   el.querySelector('.rl_ur').onclick=()=>{close();viewProfile(p.uid)};
   sc.append(el);io.observe(el)}),
  more=async()=>{if(busy||end)return;busy=true;try{const q=await db.collection('posts').orderBy('ts','desc').startAfter(lastDoc).limit(12).get();if(q.size<12)end=true;if(q.size){lastDoc=q.docs[q.size-1];add(q.docs)}}catch(e){showErr(e,'carregar')}busy=false};
@@ -592,12 +593,19 @@ function commentsUI(R,root,opt){opt=opt||{};const FV=firebase.firestore.FieldVal
  const cl=root.querySelector('.cl2'),rp=root.querySelector('.cm_rp'),inp=root.querySelector('input'),btn=root.querySelector('.btn');let items=[],rep=null;
  const prof=u=>(opt.prof||viewProfile)(u),clearRep=()=>{rep=null;rp.classList.add('hide')},
  row=(c,isR)=>{const e=document.createElement('div');e.className='cm_r'+(isR?' rpl':'');let L=c.likes||[];
-  e.innerHTML=`<img class="av" src="${ICON}"><div class="cm_b"><div><b>${esc(c.name)}</b> <span class="mt">${ago(c.ts)}</span></div><div>${c.rto?'<span class="cm_at">@'+esc(c.rto)+'</span> ':''}${esc(c.t)}</div><div class="cm_a"><button class="lnk">Responder</button></div></div><button class="cm_l"></button>`;
+  e.innerHTML=`<img class="av" src="${ICON}"><div class="cm_b"><div><b>${esc(c.name)}</b> <span class="mt">${ago(c.ts)}</span></div><div class="cm_t">${c.rto?'<span class="cm_at">@'+esc(c.rto)+'</span> ':''}${esc(c.t)}${c.edited?' <span class="mt">(editado)</span>':''}</div><div class="cm_a"><button class="lnk" data-a="r">Responder</button><button class="lnk" data-a="c">Copiar</button>${c.uid==me.uid?'<button class="lnk" data-a="e">Editar</button>':''}${c.uid==me.uid||opt.owner==me.uid?'<button class="lnk" data-a="d">Excluir</button>':''}</div></div><button class="cm_l"></button>`;
   getU(c.uid).then(u=>{if(u.photo)e.querySelector('.av').src=u.photo});
   e.querySelector('.av').onclick=e.querySelector('b').onclick=()=>prof(c.uid);
   const lk=e.querySelector('.cm_l'),r=()=>{lk.classList.toggle('on',L.includes(me.uid));lk.innerHTML=heart()+(L.length?'<span>'+L.length+'</span>':'')};r();
   lk.onclick=async()=>{const on=L.includes(me.uid);L=on?L.filter(x=>x!=me.uid):[...L,me.uid];c.likes=L;r();try{await col.doc(c.id).update({likes:FV[on?'arrayRemove':'arrayUnion'](me.uid)})}catch(x){showErr(x,'curtir comentário')}};
-  e.querySelector('.cm_a .lnk').onclick=()=>{rep={parent:c.parent||c.id,to:c.name};rp.innerHTML='Respondendo a <b>'+esc(c.name)+'</b><button class="lnk">✕</button>';rp.classList.remove('hide');rp.querySelector('button').onclick=clearRep;inp.focus()};
+  e.querySelector('[data-a=r]').onclick=()=>{rep={parent:c.parent||c.id,to:c.name};rp.innerHTML='Respondendo a <b>'+esc(c.name)+'</b><button class="lnk">✕</button>';rp.classList.remove('hide');rp.querySelector('button').onclick=clearRep;inp.focus()};
+  const A=k=>e.querySelector('[data-a='+k+']');
+  A('c').onclick=async()=>{try{await navigator.clipboard.writeText(c.t);toast('Comentário copiado')}catch(x){prompt('Copie o comentário:',c.t)}};
+  const ae=A('e');if(ae)ae.onclick=()=>{if(String(c.id).startsWith('tmp'))return toast('Aguarde um instante');const tx=e.querySelector('.cm_t');tx.innerHTML='<input maxlength="300"><div class="row" style="margin-top:6px"><button class="btn s">Cancelar</button><button class="btn">Salvar</button></div>';
+   const i2=tx.querySelector('input'),[b1,b2]=tx.querySelectorAll('button');i2.value=c.t;i2.focus();b1.onclick=()=>draw();
+   b2.onclick=async()=>{const v=i2.value.trim();if(!v)return;try{await col.doc(c.id).update({t:v,edited:true});c.t=v;c.edited=true;draw()}catch(x){showErr(x,'editar comentário')}};i2.onkeydown=ev=>{if(ev.key=='Enter')b2.click();if(ev.key=='Escape')draw()}};
+  const ad=A('d');if(ad)ad.onclick=async()=>{if(String(c.id).startsWith('tmp'))return toast('Aguarde um instante');if(!confirm('Excluir este comentário'+(isR?'':' e as respostas dele')+'?'))return;
+   try{await col.doc(c.id).delete();const gone=[c.id];if(!c.parent)for(const k of items.filter(k=>k.parent==c.id)){try{await col.doc(k.id).delete();gone.push(k.id)}catch(x){}}items=items.filter(k=>!gone.includes(k.id));draw();toast('Comentário excluído')}catch(x){showErr(x,'excluir comentário')}};
   return e},
  draw=()=>{cl.innerHTML='';if(!items.length){cl.innerHTML='<p class="mt" style="padding:6px 0">Seja o primeiro a comentar.</p>';return}
   items.filter(c=>!c.parent).forEach(c=>{cl.append(row(c,false));items.filter(k=>k.parent==c.id).forEach(k=>cl.append(row(k,true)))})};
