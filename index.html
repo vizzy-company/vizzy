@@ -214,6 +214,7 @@ nav .sp{height:1px;background:var(--bd);margin:8px 6px}
 .chat{border-radius:var(--r2);box-shadow:var(--sh)}
 .dsep{background:var(--in)}
 @media(min-width:761px){#cv2:not(.hide) .msgs{overflow-y:auto!important;height:auto!important;flex:1;min-height:0!important}}
+.rl_im{width:100%;height:100%;max-width:none;max-height:none;object-fit:contain}
 </style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -594,7 +595,7 @@ function reels(docs,start){if(!docs.length)return toast('Nada para mostrar ainda
  document.body.append(o);document.body.style.overflow='hidden';
  const sc=o.querySelector('.rl_sc'),au=new Audio();au.loop=true;let muted=false,lastDoc=docs[docs.length-1],busy=false,end=false,curEl=null;
  const CM='<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
- close=()=>{au.pause();io.disconnect();o.remove();document.body.style.overflow='';document.removeEventListener('keydown',kd)},
+ close=()=>{au.pause();io.disconnect();o.remove();document.body.style.overflow='';document.removeEventListener('keydown',kd);removeEventListener('resize',rf)},
  kd=e=>{if(e.key=='Escape'&&!document.querySelector('.modal'))close()},
  io=new IntersectionObserver(es=>es.forEach(async en=>{if(!en.isIntersecting)return;const el=en.target,p=el._p;curEl=el;au.pause();
   if(el._i>=sc.children.length-3)more();
@@ -607,9 +608,9 @@ function reels(docs,start){if(!docs.length)return toast('Nada para mostrar ainda
   el.querySelector('.rl_cm').onclick=()=>{const sh=document.createElement('div');sh.className='rl_sh';sh.innerHTML='<div class="rl_sp"><div class="hd"><b>Comentários</b><button class="ib" id="sx">✕</button></div><div class="cs"></div></div>';o.append(sh);sh.onclick=ev=>{if(ev.target==sh)sh.remove()};sh.querySelector('#sx').onclick=()=>sh.remove();commentsUI(pref(id,p),sh.querySelector('.cs'),{owner:p.uid,prof:u=>{close();viewProfile(u)}}).load().catch(showErr)};
   el.querySelector('.rl_ur').onclick=()=>{close();viewProfile(p.uid)};
   el.querySelector('.rl_dl').onclick=()=>dlImgs([p.img],id);if(p.audio)audMeta(p.audio).then(a=>{if(a)el.querySelector('.rl_mt').textContent=a.title||a.name});
-  sc.append(el);io.observe(el)}),
+  const im=el.querySelector('.rl_im'),rw=el.querySelector('.rl_w'),fit=()=>{const nw=im.naturalWidth,nh=im.naturalHeight;if(!nw)return;const k=Math.min((el.clientWidth||innerWidth)/nw,(el.clientHeight||innerHeight)/nh);rw.style.width=Math.round(nw*k)+'px';rw.style.height=Math.round(nh*k)+'px'};el._fit=fit;im.onload=fit;sc.append(el);if(im.complete)fit();io.observe(el)}),
  more=async()=>{if(busy||end)return;busy=true;try{const q=await db.collection('posts').orderBy('ts','desc').startAfter(lastDoc).limit(12).get();if(q.size<12)end=true;if(q.size){lastDoc=q.docs[q.size-1];add(q.docs)}}catch(e){showErr(e,'carregar')}busy=false};
- o.querySelector('.rl_x').onclick=close;document.addEventListener('keydown',kd);
+ o.querySelector('.rl_x').onclick=close;document.addEventListener('keydown',kd);const rf=()=>sc.querySelectorAll('.rl_sl').forEach(x=>x._fit&&x._fit());addEventListener('resize',rf);
  o.querySelector('.rl_s').onclick=e=>{muted=!muted;au.muted=muted;e.target.textContent=muted?'🔇':'🔊'};
  add(docs);requestAnimationFrame(()=>{sc.scrollTop=start*sc.clientHeight})}
 
