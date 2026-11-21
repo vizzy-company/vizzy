@@ -236,6 +236,7 @@ nav button span{font-size:10px;white-space:nowrap}nav button i{width:24px;height
 .swr{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bd);cursor:pointer}.swr:last-of-type{border-bottom:0}.swr .tx{flex:1;min-width:0}.swr b{display:block;font-size:14px}.swr span{font-size:12px;color:var(--mut)}
 .sw{position:relative;width:44px;height:26px;flex:none;display:block}.sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer;z-index:1}.sw i{position:absolute;inset:0;background:var(--bd);border-radius:999px;transition:.2s}.sw i::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0004}.sw input:checked+i{background:var(--ac)}.sw input:checked+i::after{transform:translateX(18px)}
 .sws{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;align-items:center}.swc{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0;box-shadow:0 0 0 1px var(--bd) inset}.swc.on{border-color:var(--tx)}
+#cv2.hide::before{content:none!important}
 </style></head><body class="boot"><div id="splash"><img id="lgB" alt="Vizzy"><div class="spin"></div></div>
 <section id="auth">
 <img class="lg" id="lgA" alt="Vizzy"><p class="tag">Compartilhe momentos, publique stories e converse com quem importa.</p>
@@ -537,9 +538,9 @@ function settings(){const u=auth.currentUser,hasPw=u.providerData.some(p=>p.prov
 // MENSAGENS
 let cu=null;
 function msg(){document.body.style.overflow='';$('#main').classList.add('wide');$('#main').innerHTML=`<div class="c_hd" id="mhd"><input id="cq" placeholder="Buscar conversa..." autocomplete="off"><button class="btn" id="nn" style="flex:none">＋ Nova</button></div><div class="chat"><div class="cl" id="cl"></div><div id="cv2" class="hide"></div></div>`;
- $('#cq').oninput=renderList;$('#nn').onclick=newChatMenu;CHR=renderList;unsub=()=>{CHR=null;cu=null;if(mu){mu();mu=null}};renderList()}
+ $('#cq').oninput=renderList;$('#nn').onclick=newChatMenu;CHR=renderList;unsub=()=>{CHR=null;cu=null;if(mu){mu();mu=null}};AUTO=true;renderList()}
 let mu=null;
-function openChat(id,nm){cu=id;markRead(id);if(mu)mu();let cd={},docs=[];
+function openChat(id,nm){AUTO=false;cu=id;markRead(id);if(mu)mu();let cd={},docs=[];
  const hd=$('#mhd');if(matchMedia('(max-width:760px)').matches&&hd)hd.classList.add('hide');
  $('#cl').classList.add('hide');$('#cv2').classList.remove('hide');
  $('#cv2').innerHTML=`<div class="c_h"><button class="btn s" id="bk" style="flex:none">←</button><span id="hax"><span class="c_av">💬</span></span><div style="flex:1;min-width:0"><b id="hnm" style="display:block;overflow-wrap:anywhere">${esc(nm)}</b><div class="mt" id="hsb"></div></div><span id="hop"></span></div><div class="msgs" id="ms"></div><div class="row inp"><input id="mi" maxlength="1000" placeholder="Escreva uma mensagem..." autocomplete="off" enterkeyhint="send"><button class="btn" style="flex:none" id="sd">Enviar</button></div>`;
@@ -802,7 +803,8 @@ function renderList(){const l=$('#cl');if(!l)return;const q=(($('#cq')||{}).valu
   const grp=x.type!='dm',pv=x.last?(x.last.uid==me.uid?'Você: ':(grp?x.last.name.split(' ')[0]+': ':''))+x.last.t:(x.type=='community'?'Comunidade':grp?'Grupo':'Diga olá 👋');
   e.innerHTML=`${grp?(x.photo?`<img class="av" src="${esc(x.photo)}">`:`<span class="c_av">${x.type=='community'?'🌐':'👥'}</span>`):`<img class="av" src="${ICON}">`}<div class="c_tx"><div class="c_nm">${esc(o.nm)}</div><div class="c_pv">${esc(pv)}</div></div><div class="c_mt"><span>${o.x.last?ago({toMillis:()=>o.x.last.ms}):''}</span>${un?'<span class="c_ub"></span>':''}</div>`;
   if(!grp){const ot=(x.members||[]).find(u=>u!=me.uid);if(ot)getU(ot).then(u=>{const im=e.querySelector('.av');if(im&&u.photo)im.src=u.photo;const n2=e.querySelector('.c_nm');if(n2&&u.name)n2.textContent=u.name})}
-  e.onclick=()=>openChat(o.id,o.nm);l.append(e)})}
+  e.onclick=()=>openChat(o.id,o.nm);l.append(e)});
+ if(AUTO&&!cu&&!q&&matchMedia('(min-width:761px)').matches){AUTO=false;openChat(arr[0].id,arr[0].nm);renderList()}}
 async function searchUsers(raw){raw=raw.trim();if(!raw)return[];const h=normHandle(raw),qs=[];if(!raw.startsWith('@'))qs.push(db.collection('users').orderBy('name').startAt(raw).endAt(raw+'\uf8ff').limit(8).get());if(h)qs.push(db.collection('users').orderBy('handle').startAt(h).endAt(h+'\uf8ff').limit(8).get());
  const seen=new Set(),out=[];(await Promise.all(qs)).forEach(r=>r.forEach(d=>{if(!seen.has(d.id)&&d.id!=me.uid){seen.add(d.id);out.push(d)}}));return out}
 function userSearchModal(title,onPick,extra){const m=modal(`<h3>${title}</h3>${extra||''}<input id="us" placeholder="Buscar por apelido ou @" autocomplete="off"><div id="ur2" style="margin-top:8px"></div>`),inp=m.querySelector('#us'),box=m.querySelector('#ur2');let tm;
@@ -841,4 +843,6 @@ proc(document.body);
 function confirmUI(text,o){o=o||{};return new Promise(res=>{const m=modal(`<h3>${esc(o.title||'Tem certeza?')}</h3><p class="mt" style="margin:0 0 18px;overflow-wrap:anywhere">${esc(text)}</p><div class="row" style="gap:8px"><button class="btn s" id="cn0">Cancelar</button><button class="btn" id="cn1"${o.danger?' style="background:#e5484d;color:#fff"':''}>${esc(o.ok||'Confirmar')}</button></div>`);let done=false;const fin=v=>{if(done)return;done=true;m.remove();res(v)};
  m.querySelector('#cn0').onclick=()=>fin(false);m.querySelector('#cn1').onclick=()=>fin(true);m.addEventListener('click',e=>{if(e.target==m)fin(false)});m.querySelector('#cn1').focus()})}
 function copyFallback(t){const m=modal('<h3>Copiar texto</h3><input id="cf0" readonly><button class="btn" id="cf1" style="width:100%;margin-top:10px">Fechar</button>'),i=m.querySelector('#cf0');i.value=t;i.focus();i.select();m.querySelector('#cf1').onclick=()=>m.remove()}
+
+let AUTO=false;
 </script></body></html>
